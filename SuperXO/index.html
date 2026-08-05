@@ -1,36 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>SuperXO</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/themes.css">
-<link rel="stylesheet" href="css/animations.css">
-<link rel="stylesheet" href="css/responsive.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
+<link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-<div class="container">
+    <div id="splashScreen" class="splash">
 
-<h1 class="logo">
+<h1 class="splashLogo">
 SUPER<span>XO</span>
 </h1>
 
-<p class="subtitle">
-Classic & Ultimate Tic-Tac-Toe
+<p class="loadingText">Loading...</p>
+
+<div class="progressBar">
+<div id="progress"></div>
+</div>
+
+<p id="continueText" style="display:none;">
+Tap Anywhere to Continue
 </p>
 
-<button class="playBtn">
+</div>
+
+<div class="container" id="homeScreen">
+
+<h1 class="logo">SUPER<span>XO</span></h1>
+
+<p class="subtitle">Classic & Ultimate Tic-Tac-Toe</p>
+
+<button id="playBtn" class="playBtn">
 ▶ PLAY
 </button>
 
@@ -42,16 +51,53 @@ Classic & Ultimate Tic-Tac-Toe
 
 <button>📖 Tutorial</button>
 
-<button>⚙️ Settings</button>
+<button>⚙ Settings</button>
 
-<button>ℹ️ About</button>
-
-</div>
+<button>ℹ About</button>
 
 </div>
 
+</div>
+
+<div class="container" id="gameSelect" style="display:none">
+
+<h2>Choose Game</h2>
+
+<div class="menu">
+
+<button id="classicBtn">🎮 Classic Tic-Tac-Toe</button>
+
+<button>👑 Ultimate Tic-Tac-Toe</button>
+
+</div>
+
+<button id="backBtn">⬅ Back</button>
+
+</div>
+<div class="container" id="classicGame" style="display:none;">
+
+<h2>Classic Tic-Tac-Toe</h2>
+
+<div class="board">
+
+<div class="cell"></div>
+<div class="cell"></div>
+<div class="cell"></div>
+
+<div class="cell"></div>
+<div class="cell"></div>
+<div class="cell"></div>
+
+<div class="cell"></div>
+<div class="cell"></div>
+<div class="cell"></div>
+
+</div>
+
+<button id="classicBack">⬅ Back</button>
+
+</div>
 <script src="js/main.js"></script>
 
 </body>
-
 </html>
