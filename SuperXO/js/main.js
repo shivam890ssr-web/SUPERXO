@@ -71,6 +71,12 @@ document.getElementById("classicBack").onclick = function () {
 const cells = document.querySelectorAll(".cell");
 let currentPlayer = "X";
 let gameOver = false ;
+let xScore = 0;
+let oScore = 0;
+let drawScore = 0;
+const xScoreText = document.getElementById("xScore");
+const oScoreText = document.getElementById("oScore");
+const drawScoreText = document.getElementById("drawScore");
 
 const winPatterns = [
 [0,1,2],
@@ -110,6 +116,14 @@ if(a!="" && a==b && b==c){
 
 setTimeout(()=>{ 
     gameOver = true;
+    if(a==="X"){
+    xScore++;
+    xScoreText.textContent="X: "+xScore;
+}
+else{
+    oScore++;
+    oScoreText.textContent="O: "+oScore;
+}
 alert(a+" Wins!");
 },100);
 
@@ -130,8 +144,11 @@ if (draw) {
     gameOver = true;
 
     setTimeout(() => {
-        alert("It's a Draw!");
-    }, 100);
+    drawScore++;
+    drawScoreText.textContent = "Draw: " + drawScore;
+
+    alert("It's a Draw!");
+}, 100);
 }
 
 }
