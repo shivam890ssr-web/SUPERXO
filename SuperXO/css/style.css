@@ -348,3 +348,14 @@ margin-top:10px;
 #classicBack:hover{
 background:#777;
 }
+#restartBtn{
+    margin-top:20px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:15px;
+    font-size:18px;
+    cursor:pointer;
+    background:#2db8ff;
+    color:white;
+}

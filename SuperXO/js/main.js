@@ -63,6 +63,7 @@ document.getElementById("classicBtn").onclick = function () {
 };
 
 document.getElementById("classicBack").onclick = function () {
+    resetBoard();
     classicGame.style.display = "none";
     gameSelect.style.display = "block";
 };
@@ -134,3 +135,13 @@ if (draw) {
 }
 
 }
+
+function resetBoard() {
+    cells.forEach(cell => {
+        cell.textContent = "";
+    });
+
+    currentPlayer = "X";
+    gameOver = false;
+}
+document.getElementById("restartBtn").onclick = resetBoard;
