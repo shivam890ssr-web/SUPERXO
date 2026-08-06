@@ -69,6 +69,7 @@ document.getElementById("classicBack").onclick = function () {
 
 const cells = document.querySelectorAll(".cell");
 let currentPlayer = "X";
+let gameOver = false ;
 
 const winPatterns = [
 [0,1,2],
@@ -84,8 +85,7 @@ const winPatterns = [
 cells.forEach((cell,index)=>{
 
 cell.onclick=function(){
-
-if(cell.textContent!="") return;
+    if(gameOver || cell.textContent !== "") return;
 
 cell.textContent=currentPlayer;
 
@@ -107,7 +107,8 @@ let c=cells[pattern[2]].textContent;
 
 if(a!="" && a==b && b==c){
 
-setTimeout(()=>{
+setTimeout(()=>{ 
+    gameOver = true;
 alert(a+" Wins!");
 },100);
 
@@ -115,6 +116,21 @@ return;
 
 }
 
+}
+let draw = true;
+
+cells.forEach(cell => {
+    if (cell.textContent === "") {
+        draw = false;
+    }
+});
+
+if (draw) {
+    gameOver = true;
+
+    setTimeout(() => {
+        alert("It's a Draw!");
+    }, 100);
 }
 
 }
