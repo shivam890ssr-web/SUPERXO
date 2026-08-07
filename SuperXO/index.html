@@ -1,108 +1,439 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>SuperXO</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#05080f">
+  <title>SuperXO</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
+<body class="dark-mode">
 
-<body>
+  <!-- ═══════════════════ SPLASH ═══════════════════ -->
+  <div id="splashScreen" class="screen screen-splash">
+    <div class="splash-inner">
+      <h1 class="splash-logo">SUPER<span>XO</span></h1>
+      <p class="splash-tagline">Master the Ultimate Strategy</p>
+      <div class="splash-progress-wrap">
+        <div class="splash-progress-bar"><div id="splashProgress"></div></div>
+      </div>
+      <p class="splash-loading" id="splashLoadingText">Loading...</p>
+      <p class="splash-continue" id="splashContinueText" aria-live="polite">Tap Anywhere to Continue</p>
+      <span class="splash-version" id="splashVersion">v1.0.0</span>
+    </div>
+  </div>
 
-    <div id="splashScreen" class="splash">
+  <!-- ═══════════════════ HOME ═══════════════════ -->
+  <div id="homeScreen" class="screen screen-home" style="display:none">
+    <div class="home-coin-bar">
+      <span class="coin-icon">🪙</span>
+      <span id="homeCoinBalance">0</span>
+    </div>
+    <h1 class="logo">SUPER<span>XO</span></h1>
+    <p class="subtitle">Classic &amp; Ultimate Tic-Tac-Toe</p>
+    <button id="homePlayBtn" class="btn-primary btn-play" aria-label="Play game">▶ PLAY</button>
+    <nav class="home-menu" role="navigation" aria-label="Main menu">
+      <button class="btn-menu" data-nav="statisticsScreen" aria-label="Statistics">📊 Statistics</button>
+      <button class="btn-menu" data-nav="achievementsScreen" aria-label="Achievements">🏆 Achievements</button>
+      <button class="btn-menu" data-nav="tutorialScreen" aria-label="Tutorial">📖 Tutorial</button>
+      <button class="btn-menu" data-nav="settingsScreen" aria-label="Settings">⚙️ Settings</button>
+      <button class="btn-menu" data-nav="aboutScreen" aria-label="About">ℹ️ About</button>
+    </nav>
+  </div>
 
-<h1 class="splashLogo">
-SUPER<span>XO</span>
-</h1>
+  <!-- ═══════════════════ GAME SELECT ═══════════════════ -->
+  <div id="gameSelectScreen" class="screen screen-card" style="display:none">
+    <h2>Choose Game</h2>
+    <div class="card-menu">
+      <button class="btn-card" id="selectClassicBtn" aria-label="Classic Tic-Tac-Toe">
+        <span class="card-icon">🎮</span>
+        <span class="card-title">Classic</span>
+        <span class="card-sub">3×3 Tic-Tac-Toe</span>
+      </button>
+      <button class="btn-card" id="selectUltimateBtn" aria-label="Ultimate Tic-Tac-Toe">
+        <span class="card-icon">👑</span>
+        <span class="card-title">Ultimate</span>
+        <span class="card-sub">9-Board Strategy</span>
+      </button>
+    </div>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<p class="loadingText">Loading...</p>
+  <!-- ═══════════════════ CLASSIC SETUP ═══════════════════ -->
+  <div id="classicSetupScreen" class="screen screen-card" style="display:none">
+    <h2>Classic Setup</h2>
+    <div class="setup-form">
+      <div class="setup-row">
+        <label for="p1Name">Player X</label>
+        <input type="text" id="p1Name" placeholder="Player 1" maxlength="16" aria-label="Player 1 name">
+      </div>
+      <div class="setup-row mode-toggle-row">
+        <label>Mode</label>
+        <div class="toggle-group" role="group" aria-label="Game mode">
+          <button class="toggle-btn active" data-mode="hvh" id="modeHvH">👥 Human vs Human</button>
+          <button class="toggle-btn" data-mode="hvai" id="modeHvAI">🤖 Human vs AI</button>
+        </div>
+      </div>
+      <div class="setup-row" id="p2NameRow">
+        <label for="p2Name">Player O</label>
+        <input type="text" id="p2Name" placeholder="Player 2" maxlength="16" aria-label="Player 2 name">
+      </div>
+      <div class="setup-row" id="difficultyRow" style="display:none">
+        <label for="aiDifficulty">AI Difficulty</label>
+        <select id="aiDifficulty" aria-label="AI difficulty">
+          <option value="beginner">Beginner</option>
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="impossible">Impossible</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label for="roundsSelect">Rounds</label>
+        <select id="roundsSelect" aria-label="Number of rounds">
+          <option value="1">1 Round</option>
+          <option value="3" selected>Best of 3</option>
+          <option value="5">Best of 5</option>
+          <option value="7">Best of 7</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label>Timer</label>
+        <div class="toggle-group" role="group" aria-label="Timer">
+          <button class="toggle-btn active" data-timer="off" id="timerOff">⏱ Off</button>
+          <button class="toggle-btn" data-timer="on" id="timerOn">⏱ On</button>
+        </div>
+      </div>
+      <div class="setup-row" id="timerDurationRow" style="display:none">
+        <label for="timerDuration">Turn Time</label>
+        <select id="timerDuration" aria-label="Timer duration">
+          <option value="15">15 seconds</option>
+          <option value="30" selected>30 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" id="startClassicBtn" aria-label="Start Classic game">▶ Start Game</button>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<div class="progressBar">
-<div id="progress"></div>
-</div>
+  <!-- ═══════════════════ CLASSIC GAME ═══════════════════ -->
+  <div id="classicGameScreen" class="screen screen-game" style="display:none">
+    <div class="game-header">
+      <div class="game-scores" id="classicScores" aria-live="polite">
+        <div class="score-item">
+          <span class="score-name" id="classicP1Name">Player 1</span>
+          <span class="score-val" id="classicScoreX">0</span>
+        </div>
+        <div class="score-item score-draw">
+          <span class="score-name">Draw</span>
+          <span class="score-val" id="classicScoreDraw">0</span>
+        </div>
+        <div class="score-item">
+          <span class="score-name" id="classicP2Name">Player 2</span>
+          <span class="score-val" id="classicScoreO">0</span>
+        </div>
+      </div>
+      <div class="game-round" id="classicRoundInfo">Round 1 / 1</div>
+    </div>
 
-<p id="continueText" style="display:none;">
-Tap Anywhere to Continue
-</p>
+    <div class="turn-indicator" id="classicTurnIndicator" aria-live="polite">
+      <span id="classicTurnText">Player 1's turn</span>
+      <div class="timer-display" id="classicTimerDisplay" style="display:none">
+        <div class="timer-ring" id="classicTimerRing">
+          <span id="classicTimerCount">30</span>
+        </div>
+      </div>
+    </div>
 
-</div>
+    <!-- AI thinking overlay -->
+    <div class="ai-thinking" id="aiThinking" style="display:none" aria-live="polite">
+      <span class="thinking-dots">AI Thinking<span>.</span><span>.</span><span>.</span></span>
+    </div>
 
-<div class="container" id="homeScreen">
+    <div class="classic-board" id="classicBoard" role="grid" aria-label="Game board">
+      <div class="classic-cell" data-idx="0" role="gridcell" tabindex="0" aria-label="Cell 1"></div>
+      <div class="classic-cell" data-idx="1" role="gridcell" tabindex="0" aria-label="Cell 2"></div>
+      <div class="classic-cell" data-idx="2" role="gridcell" tabindex="0" aria-label="Cell 3"></div>
+      <div class="classic-cell" data-idx="3" role="gridcell" tabindex="0" aria-label="Cell 4"></div>
+      <div class="classic-cell" data-idx="4" role="gridcell" tabindex="0" aria-label="Cell 5"></div>
+      <div class="classic-cell" data-idx="5" role="gridcell" tabindex="0" aria-label="Cell 6"></div>
+      <div class="classic-cell" data-idx="6" role="gridcell" tabindex="0" aria-label="Cell 7"></div>
+      <div class="classic-cell" data-idx="7" role="gridcell" tabindex="0" aria-label="Cell 8"></div>
+      <div class="classic-cell" data-idx="8" role="gridcell" tabindex="0" aria-label="Cell 9"></div>
+      <svg class="win-line-svg" id="classicWinLine" viewBox="0 0 3 3" aria-hidden="true"></svg>
+    </div>
 
-<h1 class="logo">SUPER<span>XO</span></h1>
+    <div class="game-actions">
+      <button class="btn-action" id="classicUndoBtn" aria-label="Undo last move" disabled>↩ Undo</button>
+      <button class="btn-action" id="classicHintBtn" aria-label="Get hint">💡 Hint <span id="classicHintCount">(3)</span></button>
+      <button class="btn-action" id="classicRestartBtn" aria-label="Restart game">🔄 Restart</button>
+      <button class="btn-action" id="classicReplayBtn" aria-label="View replay" disabled>▶ Replay</button>
+    </div>
+    <button class="btn-back" id="classicBackBtn" aria-label="Back to menu">← Back</button>
+  </div>
 
-<p class="subtitle">Classic & Ultimate Tic-Tac-Toe</p>
+  <!-- ═══════════════════ ULTIMATE SETUP ═══════════════════ -->
+  <div id="ultimateSetupScreen" class="screen screen-card" style="display:none">
+    <h2>Ultimate Setup</h2>
+    <div class="setup-form">
+      <div class="setup-row">
+        <label for="up1Name">Player X</label>
+        <input type="text" id="up1Name" placeholder="Player 1" maxlength="16" aria-label="Player 1 name">
+      </div>
+      <div class="setup-row mode-toggle-row">
+        <label>Mode</label>
+        <div class="toggle-group" role="group" aria-label="Game mode">
+          <button class="toggle-btn active" data-umode="hvh" id="uModeHvH">👥 Human vs Human</button>
+          <button class="toggle-btn" data-umode="hvai" id="uModeHvAI">🤖 Human vs AI</button>
+        </div>
+      </div>
+      <div class="setup-row" id="up2NameRow">
+        <label for="up2Name">Player O</label>
+        <input type="text" id="up2Name" placeholder="Player 2" maxlength="16" aria-label="Player 2 name">
+      </div>
+      <div class="setup-row" id="uDifficultyRow" style="display:none">
+        <label for="uAiDifficulty">AI Difficulty</label>
+        <select id="uAiDifficulty" aria-label="AI difficulty">
+          <option value="beginner">Beginner</option>
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="impossible">Impossible</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" id="startUltimateBtn" aria-label="Start Ultimate game">▶ Start Game</button>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<button id="playBtn" class="playBtn">
-▶ PLAY
-</button>
+  <!-- ═══════════════════ ULTIMATE GAME ═══════════════════ -->
+  <div id="ultimateGameScreen" class="screen screen-game screen-ultimate" style="display:none">
+    <div class="game-header">
+      <div class="game-scores" id="ultimateScores" aria-live="polite">
+        <div class="score-item">
+          <span class="score-name" id="ultimateP1Name">Player 1</span>
+          <span class="score-val" id="ultimateScoreX">0</span>
+        </div>
+        <div class="score-item score-draw">
+          <span class="score-name">Draw</span>
+          <span class="score-val" id="ultimateScoreDraw">0</span>
+        </div>
+        <div class="score-item">
+          <span class="score-name" id="ultimateP2Name">Player 2</span>
+          <span class="score-val" id="ultimateScoreO">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="turn-indicator" id="ultimateTurnIndicator" aria-live="polite">
+      <span id="ultimateTurnText">Player 1's turn</span>
+    </div>
+    <div class="ai-thinking" id="uAiThinking" style="display:none" aria-live="polite">
+      <span class="thinking-dots">AI Thinking<span>.</span><span>.</span><span>.</span></span>
+    </div>
+    <div class="ultimate-board" id="ultimateBoard" role="grid" aria-label="Ultimate game board"></div>
+    <div class="game-actions">
+      <button class="btn-action" id="ultimateRestartBtn" aria-label="Restart game">🔄 Restart</button>
+      <button class="btn-action" id="ultimateReplayBtn" aria-label="View replay" disabled>▶ Replay</button>
+    </div>
+    <button class="btn-back" id="ultimateBackBtn" aria-label="Back to menu">← Back</button>
+  </div>
 
-<div class="menu">
+  <!-- ═══════════════════ REPLAY ═══════════════════ -->
+  <div id="replayScreen" class="screen screen-card" style="display:none">
+    <h2>Replay</h2>
+    <div class="replay-info" id="replayInfo" aria-live="polite">Move 0 / 0</div>
+    <div class="replay-board-wrap" id="replayBoardWrap"></div>
+    <div class="replay-controls">
+      <button class="btn-action" id="replayPrevBtn" aria-label="Previous move">← Prev</button>
+      <span class="replay-step" id="replayStepDisplay">0 / 0</span>
+      <button class="btn-action" id="replayNextBtn" aria-label="Next move">Next →</button>
+    </div>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<button>📊 Statistics</button>
+  <!-- ═══════════════════ STATISTICS ═══════════════════ -->
+  <div id="statisticsScreen" class="screen screen-card" style="display:none">
+    <h2>📊 Statistics</h2>
+    <div class="stats-grid" id="statsGrid" aria-label="Statistics">
+      <div class="stat-item"><span class="stat-label">Games Played</span><span class="stat-val" id="statPlayed">0</span></div>
+      <div class="stat-item"><span class="stat-label">Wins</span><span class="stat-val green" id="statWins">0</span></div>
+      <div class="stat-item"><span class="stat-label">Losses</span><span class="stat-val red" id="statLosses">0</span></div>
+      <div class="stat-item"><span class="stat-label">Draws</span><span class="stat-val" id="statDraws">0</span></div>
+      <div class="stat-item"><span class="stat-label">Win Streak</span><span class="stat-val" id="statStreak">0</span></div>
+      <div class="stat-item"><span class="stat-label">Best Streak</span><span class="stat-val gold" id="statBestStreak">0</span></div>
+      <div class="stat-item"><span class="stat-label">AI Wins</span><span class="stat-val" id="statAiWins">0</span></div>
+      <div class="stat-item"><span class="stat-label">AI Losses</span><span class="stat-val" id="statAiLosses">0</span></div>
+      <div class="stat-item wide"><span class="stat-label">Favorite Mode</span><span class="stat-val" id="statFavMode">—</span></div>
+      <div class="stat-item wide"><span class="stat-label">Avg Game Time</span><span class="stat-val" id="statAvgTime">—</span></div>
+    </div>
+    <canvas id="statsGraph" class="stats-graph" aria-label="Win/loss/draw chart"></canvas>
+    <div class="stats-history" id="statsHistory"></div>
+    <button class="btn-danger" id="resetStatsBtn" aria-label="Reset statistics">🗑 Reset Statistics</button>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<button>🏆 Achievements</button>
+  <!-- ═══════════════════ ACHIEVEMENTS ═══════════════════ -->
+  <div id="achievementsScreen" class="screen screen-card" style="display:none">
+    <h2>🏆 Achievements</h2>
+    <div class="ach-coin-bar">
+      <span class="coin-icon">🪙</span>
+      <span id="achCoinBalance">0</span>
+    </div>
+    <div class="ach-list" id="achList" aria-label="Achievements list"></div>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<button>📖 Tutorial</button>
+  <!-- ═══════════════════ SETTINGS ═══════════════════ -->
+  <div id="settingsScreen" class="screen screen-card" style="display:none">
+    <h2>⚙️ Settings</h2>
+    <div class="settings-list">
+      <div class="setting-row">
+        <span class="setting-label">Dark Mode</span>
+        <button class="toggle-switch" id="toggleDarkMode" role="switch" aria-checked="true" aria-label="Dark mode">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Animations</span>
+        <button class="toggle-switch" id="toggleAnimations" role="switch" aria-checked="true" aria-label="Animations">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Sound FX</span>
+        <button class="toggle-switch" id="toggleSound" role="switch" aria-checked="true" aria-label="Sound effects">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Music</span>
+        <button class="toggle-switch" id="toggleMusic" role="switch" aria-checked="true" aria-label="Music">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Default Timer</span>
+        <button class="toggle-switch" id="toggleTimerDefault" role="switch" aria-checked="false" aria-label="Default timer">
+          <span class="toggle-thumb"></span>
+        </button>
+      </div>
 
-<button>⚙ Settings</button>
+      <div class="settings-section-title">Theme</div>
+      <div class="theme-grid" id="themeGrid" aria-label="Theme selection"></div>
 
-<button>ℹ About</button>
+      <div class="settings-section-title">Piece Colors</div>
+      <div class="color-packs" id="colorPacks" aria-label="Piece color packs"></div>
 
-</div>
+      <div class="settings-section-title">Board Style</div>
+      <div class="board-custom" id="boardCustomSection">
+        <div class="setting-row">
+          <span class="setting-label">Corner Radius</span>
+          <input type="range" id="cornerRadius" min="0" max="30" value="18" aria-label="Corner radius">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Glow Intensity</span>
+          <select id="glowIntensity" aria-label="Glow intensity">
+            <option value="none">None</option>
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <button class="btn-danger" id="resetProgressBtn" aria-label="Reset all progress">🗑 Reset Progress</button>
+    <p class="settings-version" id="settingsVersion">Version 1.0.0</p>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-</div>
+  <!-- ═══════════════════ TUTORIAL ═══════════════════ -->
+  <div id="tutorialScreen" class="screen screen-card" style="display:none">
+    <h2>📖 Tutorial</h2>
+    <div class="tut-menu">
+      <button class="btn-card" id="tutClassicBtn" aria-label="Classic tutorial">
+        <span class="card-icon">🎮</span>
+        <span class="card-title">Classic Tutorial</span>
+      </button>
+      <button class="btn-card" id="tutUltimateBtn" aria-label="Ultimate tutorial">
+        <span class="card-icon">👑</span>
+        <span class="card-title">Ultimate Tutorial</span>
+      </button>
+    </div>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<div class="container" id="gameSelect" style="display:none">
+  <!-- Tutorial active walkthrough -->
+  <div id="tutorialActiveScreen" class="screen screen-game" style="display:none">
+    <div class="tut-header">
+      <span class="tut-step-indicator" id="tutStepIndicator">Step 1 / 5</span>
+      <button class="btn-action" id="tutPracticeBtn" aria-label="Enter practice mode">🎯 Practice</button>
+    </div>
+    <div class="tut-instruction-box" id="tutInstruction" aria-live="polite">Welcome!</div>
+    <div class="tut-board-wrap" id="tutBoardWrap"></div>
+    <div class="tut-controls">
+      <button class="btn-action" id="tutPrevBtn" aria-label="Previous step">← Prev</button>
+      <button class="btn-action" id="tutNextBtn" aria-label="Next step">Next →</button>
+    </div>
+    <button class="btn-back" id="tutExitBtn" aria-label="Exit tutorial">✕ Exit</button>
+  </div>
 
-<h2>Choose Game</h2>
+  <!-- ═══════════════════ ABOUT ═══════════════════ -->
+  <div id="aboutScreen" class="screen screen-card" style="display:none">
+    <h2>ℹ️ About</h2>
+    <div class="about-content">
+      <div class="about-logo">SUPER<span>XO</span></div>
+      <div class="about-version" id="aboutVersion">Version 1.0.0</div>
+      <div class="about-section">
+        <p class="about-label">Developer</p>
+        <p class="about-val">Shivam Singh Rajpoot</p>
+      </div>
+      <div class="about-section">
+        <p class="about-label">Institution</p>
+        <p class="about-val">Madhav Institute of Technology and Science</p>
+        <p class="about-val-sub">MITS Gwalior</p>
+      </div>
+      <div class="about-section">
+        <p class="about-label">Degree</p>
+        <p class="about-val">B.Tech — Mathematics and Computing</p>
+      </div>
+      <div class="about-section">
+        <p class="about-label">Credits</p>
+        <p class="about-val">Built with HTML, CSS &amp; Vanilla JavaScript</p>
+        <p class="about-val-sub">No frameworks. No libraries. Pure craft.</p>
+      </div>
+      <div class="about-section">
+        <p class="about-label">Privacy</p>
+        <p class="about-val-sub">All data is stored locally on your device. No information is collected or transmitted.</p>
+      </div>
+    </div>
+    <button class="btn-back" data-back aria-label="Back">← Back</button>
+  </div>
 
-<div class="menu">
+  <!-- ═══════════════════ DIALOG OVERLAY ═══════════════════ -->
+  <div id="dialogOverlay" class="dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" style="display:none">
+    <div class="dialog-box">
+      <h3 class="dialog-title" id="dialogTitle"></h3>
+      <p class="dialog-message" id="dialogMessage"></p>
+      <div class="dialog-actions" id="dialogActions"></div>
+    </div>
+  </div>
 
-<button id="classicBtn">🎮 Classic Tic-Tac-Toe</button>
+  <!-- ═══════════════════ TOAST ═══════════════════ -->
+  <div id="toastContainer" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-<button>👑 Ultimate Tic-Tac-Toe</button>
+  <!-- ═══════════════════ TUTORIAL HIGHLIGHT ═══════════════════ -->
+  <div id="tutHighlight" class="tut-highlight" style="display:none" aria-hidden="true"></div>
 
-</div>
-
-<button id="backBtn">⬅ Back</button>
-
-</div>
-<div class="container" id="classicGame" style="display:none;">
-
-<h2>Classic Tic-Tac-Toe</h2>
-<div class="scoreBoard">
-    <span id="xScore">X: 0</span>
-    <span id="drawScore">Draw: 0</span>
-    <span id="oScore">O: 0</span>
-</div>
-
-<div class="board">
-
-<div class="cell"></div>
-<div class="cell"></div>
-<div class="cell"></div>
-
-<div class="cell"></div>
-<div class="cell"></div>
-<div class="cell"></div>
-
-<div class="cell"></div>
-<div class="cell"></div>
-<div class="cell"></div>
-
-</div>
-<button id="restartBtn">🔄 Restart Game</button>
-<button id="classicBack">⬅ Back</button>
-
-</div>
-<script src="js/main.js"></script>
-
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

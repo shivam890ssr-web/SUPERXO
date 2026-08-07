@@ -1,0 +1,99 @@
+/* responsive.css — fluid layouts from 320px to 1920px */
+
+/* ── Base container max-widths ── */
+.screen {
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+.screen-ultimate {
+  max-width: 600px;
+}
+
+/* ── Mobile-first: 320px–479px ── */
+@media (max-width: 479px) {
+  .logo { font-size: clamp(42px, 12vw, 60px); }
+  h2 { font-size: clamp(20px, 6vw, 28px); }
+
+  .classic-board { max-width: 300px; gap: 8px; }
+  .classic-cell { font-size: clamp(24px, 9vw, 40px); }
+
+  .ultimate-board { max-width: 340px; gap: 5px; }
+  .local-board { gap: 2px; padding: 3px; }
+  .ult-cell { font-size: clamp(8px, 3vw, 14px); }
+
+  .game-actions { gap: 6px; }
+  .btn-action { padding: 8px 10px; font-size: 12px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+
+  .theme-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+
+  .dialog-box { padding: 24px 18px; }
+  .dialog-actions { flex-direction: column; }
+  .dialog-btn { width: 100%; }
+
+  .setup-form { padding: 18px 14px; }
+
+  .score-val { font-size: 20px; }
+}
+
+/* ── Tablet: 480px–767px ── */
+@media (min-width: 480px) and (max-width: 767px) {
+  .classic-board { max-width: 320px; }
+  .ultimate-board { max-width: 420px; }
+  .local-board-won-overlay { font-size: 32px; }
+}
+
+/* ── Desktop: 768px+ ── */
+@media (min-width: 768px) {
+  .screen { padding: 40px 32px 60px; }
+  .screen-game { padding: 32px; }
+
+  .classic-board { max-width: 360px; }
+  .ultimate-board { max-width: 480px; gap: 10px; }
+
+  .ult-cell { font-size: clamp(14px, 2vw, 20px); }
+
+  .stats-grid { grid-template-columns: repeat(3, 1fr); }
+
+  .game-actions .btn-action { min-width: 90px; }
+}
+
+/* ── Wide desktop: 1200px+ ── */
+@media (min-width: 1200px) {
+  body { align-items: center; }
+
+  .screen {
+    min-height: auto;
+    border-radius: 28px;
+    margin: 40px auto;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+  }
+}
+
+/* ── Landscape phone ── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .screen { padding: 12px 20px; }
+  .logo { font-size: 36px; margin-bottom: 4px; }
+  .subtitle { margin-bottom: 12px; font-size: 13px; }
+  .classic-board { max-width: 260px; gap: 7px; }
+  .ultimate-board { max-width: 300px; }
+  .home-menu { gap: 6px; }
+  .btn-menu { padding: 10px 16px; font-size: 15px; }
+  .btn-play { padding: 14px; margin-bottom: 12px; }
+}
+
+/* ── High DPI / retina — prefer crisp borders ── */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .classic-board { gap: 10px; }
+}
+
+/* ── Reduced motion preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "superxo",
+  "version": "1.0.0",
+  "description": "Premium Classic and Ultimate Tic-Tac-Toe",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/property/superxo.test.js",
+    "serve": "npx --yes serve . -p 3000 -s"
+  },
+  "devDependencies": {
+    "fast-check": "^3.15.0"
+  }
+}

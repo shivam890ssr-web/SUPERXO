@@ -1,0 +1,128 @@
+/* themes.css — theme-specific body backgrounds and overrides */
+/* Theme CSS vars are applied dynamically via theme.js on :root */
+
+/* Splash screen */
+.screen-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #05080f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px;
+}
+
+.splash-logo {
+  font-size: clamp(56px, 15vw, 90px);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 30px #36dfff, 0 0 70px #36dfff;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.splash-logo span {
+  color: #7dff74;
+  text-shadow: 0 0 30px #7dff74, 0 0 70px #7dff74;
+}
+
+.splash-tagline {
+  font-size: 15px;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.splash-progress-wrap {
+  width: 100%;
+}
+
+.splash-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 30px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.splash-progress-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, #27b7ff, #00ffd0);
+  border-radius: 30px;
+  width: 0%;
+  transition: width 0.15s linear;
+}
+
+.splash-loading {
+  font-size: 15px;
+  opacity: 0.6;
+}
+
+.splash-continue {
+  font-size: 17px;
+  cursor: pointer;
+  display: none;
+  animation: blink-text 1.2s ease-in-out infinite;
+  color: #7dff74;
+  font-weight: 600;
+  text-shadow: 0 0 12px #7dff74;
+}
+
+.splash-version {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  font-size: 11px;
+  opacity: 0.35;
+}
+
+@keyframes blink-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Light mode body background */
+.light-mode {
+  background: linear-gradient(135deg, #dde8ff, #eef4ff);
+  color: #1a2040;
+}
+
+.light-mode .btn-back,
+.light-mode .btn-action,
+.light-mode .btn-menu,
+.light-mode .setup-form,
+.light-mode .game-scores,
+.light-mode .turn-indicator,
+.light-mode .stat-item,
+.light-mode .ach-item,
+.light-mode .setting-row {
+  background: rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.12);
+  color: #1a2040;
+}
+
+.light-mode .classic-cell,
+.light-mode .tut-cell {
+  background: rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.12);
+}
+
+.light-mode .local-board {
+  border-color: rgba(0,0,0,0.15);
+}
+
+.light-mode body::before,
+.light-mode body::after {
+  opacity: 0.3;
+}
