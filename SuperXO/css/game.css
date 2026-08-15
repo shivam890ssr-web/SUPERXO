@@ -1,12 +1,10 @@
 /* ═══════════════════════════════════════════════════
    game.css — Classic + Ultimate boards + game screens
-   Grid lines use CSS custom properties so they can
-   be toggled and adjusted from Settings without any
-   JS DOM manipulation.
+   Grid lines use CSS custom properties — toggled from
+   Settings without any JS DOM manipulation.
 ═══════════════════════════════════════════════════ */
 
-/* ── Defaults for grid-line CSS vars ── */
-/* These are also set from applyBoardCustom() in main.js */
+/* ── Grid-line CSS var defaults (also set by applyBoardCustom in main.js) ── */
 :root {
   --grid-line-width: 2px;
   --grid-line-opacity: 0.22;
@@ -17,9 +15,7 @@
   --inner-grid-width: 1px;
   --inner-grid-opacity: 0.15;
   --inner-grid-visible: 1;
-  /* derived colour so grid lines match the active theme accent */
-  --grid-line-color-classic: rgba(45,212,255, var(--grid-line-opacity));
-  --cell-bg: #070c1a; /* dark cell background, independent of body bg */
+  --cell-bg: #070c1a;
   --ult-cell-bg: #06090f;
 }
 
@@ -27,15 +23,17 @@
    GAME SCREEN LAYOUT
 ══════════════════════════════════════ */
 .screen-game {
-  padding: 10px 10px 44px;
-  gap: 10px;
+  padding: 10px 12px 44px;
+  gap: 8px;
   max-width: 520px;
   margin: 0 auto;
   width: 100%;
-  /* Use flex so board fills available space nicely */
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Scroll if content taller than viewport — prevents clipping on small phones */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .screen-ultimate {
@@ -47,7 +45,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -58,7 +56,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 14px;
-  padding: 10px 6px;
+  padding: 9px 6px;
 }
 
 .score-item {
@@ -67,6 +65,7 @@
   align-items: center;
   gap: 2px;
   flex: 1;
+  min-width: 0; /* allow text-overflow to work */
 }
 
 .score-name {
@@ -75,7 +74,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 80px;
+  /* Scales with screen — long player names never overflow */
+  max-width: min(90px, 28vw);
+  width: 100%;
+  text-align: center;
 }
 
 .score-val {
@@ -107,12 +109,13 @@
   border-radius: 13px;
   padding: 9px 16px;
   width: 100%;
+  overflow: hidden; /* prevent text overflowing on tiny phones */
   transition: border-color 0.35s cubic-bezier(.4,0,.2,1),
-              box-shadow 0.35s cubic-bezier(.4,0,.2,1),
-              background 0.35s cubic-bezier(.4,0,.2,1);
+              box-shadow   0.35s cubic-bezier(.4,0,.2,1),
+              background   0.35s cubic-bezier(.4,0,.2,1);
 }
 
-/* Active player glow on turn indicator */
+/* Active player glow */
 .turn-indicator.player-x-active {
   border-color: color-mix(in srgb, var(--color-accent-1) 60%, transparent);
   box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent-1) 22%, transparent),
@@ -126,22 +129,25 @@
   background: color-mix(in srgb, var(--color-accent-2) 7%, var(--color-surface));
 }
 
-/* Animate text when turn changes */
+/* Turn text — truncate long names, fade on change */
 #classicTurnText, #ultimateTurnText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: opacity 0.18s;
 }
 
 /* Score items — highlight active player */
+.score-item { transition: opacity 0.25s; }
 .score-item.active-player .score-val {
   text-shadow: 0 0 12px currentColor;
   transform: scale(1.08);
   transition: transform 0.25s;
 }
-.score-item { transition: opacity 0.25s; }
 .score-item.inactive-player { opacity: .52; }
 
 /* ── Timer ── */
-.timer-display { display: flex; align-items: center; }
+.timer-display { display: flex; align-items: center; flex-shrink: 0; }
 
 .timer-ring {
   width: 42px;
@@ -153,6 +159,7 @@
   justify-content: center;
   font-size: 15px;
   font-weight: 800;
+  flex-shrink: 0;
   transition: border-color .3s, color .3s;
 }
 
@@ -173,8 +180,8 @@
   opacity: .72;
   font-style: italic;
   text-align: center;
-  padding: 7px;
-  min-height: 36px;
+  padding: 4px 7px;
+  min-height: 28px; /* reduced from 36px — less wasted space on small phones */
 }
 
 .thinking-dots span { animation: blink-dot 1.2s infinite; }
@@ -189,7 +196,7 @@
 /* ── Game actions ── */
 .game-actions {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
   width: 100%;
@@ -197,11 +204,11 @@
 
 /* ══════════════════════════════════════
    CLASSIC BOARD
-   
-   Grid lines are rendered as the GAP
-   between cells.  The board background
-   colour IS the grid line colour.
+
+   Grid lines = GAP between cells.
+   Board background IS the grid line colour.
    Cells sit on --cell-bg.
+   Board is always square via aspect-ratio.
 ══════════════════════════════════════ */
 
 .classic-board {
@@ -209,10 +216,14 @@
   grid-template-columns: repeat(3, 1fr);
   position: relative;
 
-  /* Responsive sizing: never wider than viewport minus padding */
-  width: min(340px, calc(100vw - 28px));
+  /*
+   * Width formula:
+   *  - Never wider than viewport minus 24px (12px each side)
+   *  - Capped at 340px — comfortable on all phones and desktop
+   */
+  width: min(340px, calc(100vw - 24px));
 
-  /* Grid lines via gap + board background */
+  /* Grid lines via gap + board background colour */
   gap: calc(var(--grid-line-width) * var(--grid-lines-visible));
   background: color-mix(
     in srgb,
@@ -223,14 +234,15 @@
   border-radius: calc(var(--cell-radius, 16px) + 4px);
   overflow: hidden;
 
-  /* Outer border matches grid-line colour */
   border: calc(var(--grid-line-width) * var(--grid-lines-visible)) solid
     color-mix(in srgb, var(--color-accent-1) calc(var(--grid-line-opacity) * 100%), var(--cell-bg));
 
-  margin: 4px auto;
+  margin: 2px auto;
+  /* Force square board at all sizes */
+  aspect-ratio: 1;
 }
 
-/* When grid lines OFF, use a subtle border only */
+/* Grid lines OFF → subtle border only */
 .classic-board[style*="--grid-lines-visible: 0"],
 .no-grid .classic-board {
   gap: 0;
@@ -243,17 +255,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(28px, 10vw, 54px);
+  /*
+   * Font tied to board width so X/O always proportional.
+   * Formula: board_width / 4.5 → fits nicely in each cell.
+   * min() picks the smaller of board size or vw-based calc.
+   */
+  font-size: clamp(24px, calc((min(340px, 100vw - 24px)) / 4.5), 54px);
   font-weight: 800;
   cursor: pointer;
   transition: background var(--transition);
   user-select: none;
   position: relative;
-  /* No individual border-radius — outer board handles corners */
   border-radius: 0;
+  /* Cells must not expand outside their grid track */
+  min-width: 0;
+  min-height: 0;
 }
 
-/* Corner cells inherit parent border-radius */
+/* Corner cells get the board's rounded corners */
 .classic-cell:nth-child(1) { border-radius: var(--cell-radius, 16px) 0 0 0; }
 .classic-cell:nth-child(3) { border-radius: 0 var(--cell-radius, 16px) 0 0; }
 .classic-cell:nth-child(7) { border-radius: 0 0 0 var(--cell-radius, 16px); }
@@ -280,7 +299,6 @@
   animation: winner-pulse .55s ease-out;
 }
 
-/* Winner cell glow for O */
 .classic-cell.winner.player-o {
   background: color-mix(in srgb, var(--color-accent-2) 20%, var(--cell-bg));
 }
@@ -308,82 +326,89 @@
 
 /* ══════════════════════════════════════
    ULTIMATE BOARD
-   
-   Visual hierarchy:
-   ┌──────────── outer border (thick, bright) ─────────────┐
-   │  ┌── outer gap (separator between local boards) ──┐   │
-   │  │  ┌─ inner gap (cells within local board) ─┐    │   │
-   │  │  └─────────────────────────────────────────┘    │   │
-   │  └─────────────────────────────────────────────┘   │   │
-   └───────────────────────────────────────────────────┘
+
+   Visual hierarchy (outer → inner):
+     outer border  ← thickest, brightest
+     outer gap     ← separates 9 local boards
+     inner gap     ← separates cells within a board
+
+   Key mobile design rule:
+     Board width = min(B_MAX, 100vw - PADDING)
+     Cell font   = (board_width - overhead) / (3 boards × 3 cells × scale)
+     Both formulas use the SAME board_width reference so they're always in sync.
 ══════════════════════════════════════ */
+
+/* CSS custom property for the board width — set once, reused by cells */
+:root {
+  --ult-board-size: min(460px, calc(100vw - 20px));
+}
 
 .ultimate-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
 
-  /* Outer grid: gap between local boards */
+  /* Outer gap between the 9 local boards */
   gap: calc(var(--outer-grid-width) * var(--outer-grid-visible));
 
-  /* Outer gap colour = brighter accent blend */
+  /* Outer gap colour */
   background: color-mix(
     in srgb,
     var(--color-accent-1) calc(var(--outer-grid-opacity) * 100%),
     #030608
   );
 
-  /* Responsive: never overflow viewport */
-  width: min(460px, calc(100vw - 20px));
+  /*
+   * Never overflow the viewport.
+   * 20px = 10px screen padding each side.
+   * Capped at 460px so it stays proportional on larger screens.
+   */
+  width: var(--ult-board-size);
   margin: 4px auto;
 
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
+  /* Force square outer board */
+  aspect-ratio: 1;
 
-  /* Outer frame border matches gap colour */
+  /* Outer frame border */
   border: calc(var(--outer-grid-width) * var(--outer-grid-visible)) solid
     color-mix(in srgb, var(--color-accent-1) calc(var(--outer-grid-opacity) * 100%), #030608);
 }
 
-/* Local board — one of the 9 mini boards */
+/* One of the 9 local boards */
 .local-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   position: relative;
 
-  /* Inner gap between cells within a local board */
+  /* Inner gap between cells */
   gap: calc(var(--inner-grid-width) * var(--inner-grid-visible));
 
-  /* Inner gap colour = dimmer accent blend */
+  /* Inner gap colour — dimmer than outer */
   background: color-mix(
     in srgb,
     var(--color-accent-1) calc(var(--inner-grid-opacity) * 100%),
     var(--ult-cell-bg)
   );
 
-  /* Small padding so cells don't butt up against outer gap */
+  /* Padding creates visual separation from outer border */
   padding: 2px;
-
   transition: box-shadow var(--transition), opacity var(--transition);
 }
 
-/* Active board — bright pulsing glow */
+/* Active board — bright pulsing outline */
 .local-board.active-board {
   outline: 2px solid var(--color-accent-1);
   outline-offset: -1px;
   z-index: 3;
-  /* pulse animation defined in animations.css */
+  /* pulse animation in animations.css */
 }
 
-/* Inactive boards dim */
-.local-board.inactive-board {
-  opacity: .38;
-}
+/* Inactive → dim */
+.local-board.inactive-board { opacity: .38; }
 
-/* Won boards are slightly dimmed but NOT fully opaque
-   so the overlay symbol is visible */
-.local-board.board-won {
-  opacity: .7;
-}
+/* Won → slightly dim so overlay symbol is still visible */
+.local-board.board-won { opacity: .7; }
 
 /* Ultimate cells */
 .ult-cell {
@@ -393,12 +418,24 @@
   align-items: center;
   justify-content: center;
 
-  /* Fluid font: scales with board width, clipped to readable range */
-  font-size: clamp(8px, calc((min(460px, 100vw - 20px) - 80px) / 27), 20px);
+  /*
+   * Font formula explanation:
+   *   board_size = var(--ult-board-size) ≈ min(460px, 100vw-20px)
+   *   usable_per_board ≈ board_size / 3   (one local board width)
+   *   overhead (gaps + padding) ≈ 20px per board
+   *   usable_per_cell ≈ (board_size/3 - 20) / 3
+   *   scale factor 1.1 → comfortably fills the cell
+   *
+   * clamp ensures:
+   *   - never smaller than 7px (visible on 320px)
+   *   - never larger than 20px (not overwhelming)
+   */
+  font-size: clamp(7px, calc((var(--ult-board-size) / 9) - 6px), 20px);
   font-weight: 800;
   cursor: pointer;
   transition: background var(--transition);
   user-select: none;
+  /* Prevent grid blowout */
   min-height: 0;
   min-width: 0;
 }
@@ -417,14 +454,26 @@
   text-shadow: 0 0 5px var(--o-color, var(--color-accent-2));
 }
 
-/* ── Local board won overlay ── */
+/* Hint highlight — matches Classic hint style */
+.ult-hint-cell {
+  outline: 3px solid var(--color-accent-2) !important;
+  background: color-mix(in srgb, var(--color-accent-2) 22%, var(--ult-cell-bg)) !important;
+  animation: hint-blink .4s ease-in-out 3;
+  z-index: 2;
+}
+
+/* Local board won overlay */
 .local-board-won-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(22px, 6.5vw, 44px);
+  /*
+   * Overlay symbol scales with the local board size.
+   * Local board ≈ board_size / 3, symbol should be ≈ 55% of that.
+   */
+  font-size: clamp(16px, calc(var(--ult-board-size) / 7), 44px);
   font-weight: 900;
   opacity: 0;
   pointer-events: none;
@@ -433,9 +482,7 @@
   z-index: 4;
 }
 
-.local-board-won-overlay.visible {
-  opacity: 1;
-}
+.local-board-won-overlay.visible { opacity: 1; }
 
 .local-board-won-overlay.player-x {
   color: var(--color-accent-1);
@@ -447,11 +494,10 @@
   text-shadow: 0 0 22px var(--color-accent-2), 0 0 40px var(--color-accent-2);
 }
 
-/* Draw overlay */
 .local-board-won-overlay.draw-board {
   color: rgba(200, 200, 200, .6);
-  font-size: clamp(16px, 4vw, 28px);
-  letter-spacing: 0.05em;
+  font-size: clamp(12px, calc(var(--ult-board-size) / 12), 28px);
+  letter-spacing: .05em;
 }
 
 /* ══════════════════════════════════════
@@ -502,6 +548,7 @@
     color-mix(in srgb, var(--color-accent-1) calc(var(--grid-line-opacity) * 100%), var(--cell-bg));
   width: min(280px, calc(100vw - 48px));
   margin: 0 auto;
+  aspect-ratio: 1;
 }
 
 .replay-controls {
@@ -555,10 +602,10 @@
   letter-spacing: .05em;
 }
 
-.stat-val { font-size: 22px; font-weight: 800; }
-.stat-val.green { color: #44dd44; }
-.stat-val.red   { color: #ff5555; }
-.stat-val.gold  { color: #ffcc44; }
+.stat-val        { font-size: 22px; font-weight: 800; }
+.stat-val.green  { color: #44dd44; }
+.stat-val.red    { color: #ff5555; }
+.stat-val.gold   { color: #ffcc44; }
 
 .stats-graph {
   width: 100%;
@@ -619,18 +666,11 @@
   opacity: .5;
 }
 
-.hist-result {
-  font-size: 12px;
-  font-weight: 700;
-}
+.hist-result         { font-size: 12px; font-weight: 700; }
 .hist-result.hist-win  { color: #44dd44; }
 .hist-result.hist-loss { color: #ff5555; }
 .hist-result.hist-draw { opacity: .7; }
-
-.hist-mode {
-  font-size: 11px;
-  opacity: .65;
-}
+.hist-mode           { font-size: 11px; opacity: .65; }
 
 /* ══════════════════════════════════════
    ACHIEVEMENTS
@@ -644,11 +684,7 @@
   margin-bottom: 4px;
 }
 
-.ach-unlock-count {
-  font-size: 12px;
-  opacity: .55;
-  font-weight: 600;
-}
+.ach-unlock-count { font-size: 12px; opacity: .55; font-weight: 600; }
 
 .ach-list {
   display: flex;
@@ -681,16 +717,11 @@
   box-shadow: 0 4px 18px color-mix(in srgb, var(--color-accent-2) 12%, transparent);
 }
 
-.ach-icon { font-size: 28px; flex-shrink: 0; }
-.ach-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ach-icon  { font-size: 28px; flex-shrink: 0; }
+.ach-body  { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
-.ach-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ach-name { font-size: 14px; font-weight: 700; }
+.ach-name-row { display: flex; align-items: center; gap: 6px; }
+.ach-name     { font-size: 14px; font-weight: 700; }
 
 .ach-unlocked-badge {
   font-size: 11px;
@@ -719,11 +750,7 @@
   transition: width .6s cubic-bezier(.4,0,.2,1);
 }
 
-.ach-reward {
-  font-size: 11px;
-  color: var(--color-accent-2);
-  font-weight: 600;
-}
+.ach-reward { font-size: 11px; color: var(--color-accent-2); font-weight: 600; }
 
 /* ══════════════════════════════════════
    SETTINGS
@@ -735,8 +762,172 @@
   width: 100%;
   max-width: 440px;
   margin-bottom: 14px;
-  overflow-y: auto;
-  max-height: calc(100dvh - 200px);
+  /*
+   * Don't restrict max-height here — the screen itself scrolls.
+   * A fixed max-height inside a flex column causes double-scroll on phones.
+   */
+}
+
+/* ── BGM (Background Music) section ── */
+.bgm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Row showing loaded track name + controls */
+.bgm-track-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  background: color-mix(in srgb, var(--color-accent-1) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-accent-1) 30%, transparent);
+  border-radius: 13px;
+  flex-shrink: 0;
+}
+
+.bgm-track-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0; /* allow text truncation */
+  flex: 1;
+}
+
+.bgm-track-icon { font-size: 18px; flex-shrink: 0; }
+
+.bgm-track-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgm-track-controls {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Play/pause and remove buttons */
+.bgm-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), transform var(--transition);
+  font-family: var(--font);
+  flex-shrink: 0;
+}
+
+.bgm-play-btn {
+  background: color-mix(in srgb, var(--color-accent-1) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-1) 35%, transparent);
+  color: var(--color-accent-1);
+}
+
+.bgm-play-btn:hover {
+  background: color-mix(in srgb, var(--color-accent-1) 30%, transparent);
+  transform: scale(1.08);
+}
+
+.bgm-remove-btn {
+  background: rgba(255, 80, 80, .08);
+  border-color: rgba(255, 80, 80, .25);
+  color: #ff8080;
+  font-size: 12px;
+}
+
+.bgm-remove-btn:hover {
+  background: rgba(255, 80, 80, .2);
+  transform: scale(1.08);
+}
+
+/* Volume row */
+.bgm-volume-row { align-items: center; }
+
+.bgm-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 200px;
+}
+
+.bgm-vol-icon { font-size: 14px; flex-shrink: 0; opacity: .7; }
+
+/* Upload button — styled as a label for the hidden file input */
+.bgm-upload-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bgm-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 13px;
+  border: 1.5px dashed color-mix(in srgb, var(--color-accent-1) 40%, transparent);
+  background: color-mix(in srgb, var(--color-accent-1) 5%, transparent);
+  color: var(--color-accent-1);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  text-align: center;
+  user-select: none;
+  /* Minimum touch target */
+  min-height: 50px;
+}
+
+.bgm-upload-btn:hover {
+  background: color-mix(in srgb, var(--color-accent-1) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-1) 65%, transparent);
+}
+
+.bgm-upload-btn span:first-child { font-size: 18px; }
+
+.bgm-hint {
+  font-size: 10px;
+  opacity: .42;
+  text-align: center;
+  padding: 0 4px;
+}
+
+/* Light mode BGM */
+.light-mode .bgm-track-row {
+  background: color-mix(in srgb, #1a73e8 8%, rgba(255,255,255,.7));
+  border-color: rgba(26,115,232,.25);
+}
+.light-mode .bgm-track-name { color: #1a73e8; }
+.light-mode .bgm-play-btn {
+  background: color-mix(in srgb, #1a73e8 15%, transparent);
+  border-color: rgba(26,115,232,.3);
+  color: #1a73e8;
+}
+.light-mode .bgm-upload-btn {
+  border-color: rgba(26,115,232,.35);
+  background: color-mix(in srgb, #1a73e8 5%, transparent);
+  color: #1a73e8;
+}
+.light-mode .bgm-upload-btn:hover {
+  background: color-mix(in srgb, #1a73e8 10%, transparent);
 }
 
 .setting-row {
@@ -770,38 +961,169 @@
   margin-bottom: 2px;
 }
 
-/* Theme grid */
+/* Theme list — row layout showing name, description, cost and action */
 .theme-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 7px;
   width: 100%;
   padding: 2px 0;
 }
 
-.theme-btn {
+.theme-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+  background: var(--color-surface);
+  transition: border-color var(--transition), background var(--transition);
+  flex-shrink: 0;
+}
+
+.theme-row-active {
+  border-color: color-mix(in srgb, var(--color-accent-1) 55%, transparent);
+  background: color-mix(in srgb, var(--color-accent-1) 8%, var(--color-surface));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-accent-1) 14%, transparent);
+}
+
+.theme-row-locked {
+  opacity: .75;
+}
+
+/* Color dot */
+.theme-row-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,.18);
+}
+
+/* Name + description */
+.theme-row-info {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.theme-row-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.theme-row-desc {
+  font-size: 10px;
+  opacity: .52;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right side: cost + button */
+.theme-row-right {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 9px 7px;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.theme-row-cost {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-accent-2);
+  white-space: nowrap;
+}
+
+/* Action buttons */
+.theme-row-btn {
+  padding: 6px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 12px;
   cursor: pointer;
   font-family: var(--font);
-  transition: border-color var(--transition), background var(--transition);
+  white-space: nowrap;
+  transition: background var(--transition), transform var(--transition), border-color var(--transition);
+  min-height: 34px;
+  min-width: 58px;
+  text-align: center;
 }
 
-.theme-btn.active {
-  border-color: var(--color-accent-1);
-  background: color-mix(in srgb, var(--color-accent-1) 14%, transparent);
+/* Active state — already applied */
+.theme-row-btn-active {
+  background: color-mix(in srgb, var(--color-accent-1) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-1) 50%, transparent);
+  color: var(--color-accent-1);
+  cursor: default;
+  opacity: .85;
 }
 
-.theme-btn.locked { opacity: .46; }
-.theme-preview { width: 26px; height: 26px; border-radius: 50%; }
+/* Owned, not active — apply */
+.theme-row-btn-apply {
+  background: color-mix(in srgb, var(--color-accent-1) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-1) 35%, transparent);
+  color: var(--color-accent-1);
+}
+.theme-row-btn-apply:hover {
+  background: color-mix(in srgb, var(--color-accent-1) 24%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-1) 60%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Purchaseable — enough coins */
+.theme-row-btn-buy {
+  background: color-mix(in srgb, var(--color-accent-2) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-2) 40%, transparent);
+  color: var(--color-accent-2);
+}
+.theme-row-btn-buy:hover {
+  background: color-mix(in srgb, var(--color-accent-2) 26%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Buy button — not enough coins */
+.theme-row-btn-cant {
+  opacity: .42;
+  cursor: not-allowed;
+}
+.theme-row-btn-cant:hover { transform: none; }
+
+/* Light mode */
+.light-mode .theme-row {
+  background: rgba(255,255,255,.72);
+  border-color: rgba(26,115,232,.14);
+  color: #182040;
+}
+.light-mode .theme-row-active {
+  border-color: rgba(26,115,232,.5);
+  background: color-mix(in srgb, #1a73e8 8%, rgba(255,255,255,.85));
+  box-shadow: 0 0 14px rgba(26,115,232,.12);
+}
+.light-mode .theme-row-btn-apply {
+  color: #1a73e8;
+  border-color: rgba(26,115,232,.35);
+  background: color-mix(in srgb, #1a73e8 10%, transparent);
+}
+.light-mode .theme-row-btn-buy {
+  color: #0f9d58;
+  border-color: rgba(15,157,88,.35);
+  background: color-mix(in srgb, #0f9d58 10%, transparent);
+}
+.light-mode .theme-row-cost { color: #0f9d58; }
+.light-mode .theme-row-name { color: #182040; }
+.light-mode .theme-row-btn-active {
+  color: #1a73e8;
+  border-color: rgba(26,115,232,.4);
+  background: color-mix(in srgb, #1a73e8 14%, transparent);
+}
 
 /* Color packs */
 .color-packs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0; }
@@ -818,7 +1140,7 @@
 
 .color-pack-item.locked { opacity: .52; }
 .cp-preview { font-size: 17px; font-weight: 800; min-width: 38px; }
-.cp-name { flex: 1; font-size: 13px; font-weight: 600; }
+.cp-name    { flex: 1; font-size: 13px; font-weight: 600; }
 
 .cp-btn {
   padding: 6px 12px;
@@ -839,7 +1161,7 @@
   background: color-mix(in srgb, var(--color-accent-1) 18%, transparent);
 }
 
-/* Board custom */
+/* Board custom section */
 .board-custom { width: 100%; display: flex; flex-direction: column; gap: 9px; }
 
 input[type="range"] {
@@ -851,21 +1173,16 @@ input[type="range"] {
   width: 100%;
   cursor: pointer;
 }
-
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   background: var(--color-accent-1);
   cursor: pointer;
   box-shadow: 0 0 8px var(--glow-color);
 }
-
 input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   background: var(--color-accent-1);
   cursor: pointer;
@@ -873,36 +1190,88 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ══════════════════════════════════════
-   ABOUT
+   ABOUT — premium developer card
 ══════════════════════════════════════ */
 .about-content {
   width: 100%;
   max-width: 440px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 18px;
-  padding: 24px 20px;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
   margin-bottom: 14px;
 }
 
+.about-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
 .about-logo {
-  font-size: 36px;
+  font-size: clamp(28px, 8vw, 40px);
   font-weight: 800;
   text-align: center;
   color: var(--color-accent-1);
-  text-shadow: 0 0 18px var(--glow-color);
-  letter-spacing: 2px;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--glow-color) 55%, transparent);
+  letter-spacing: 3px;
 }
 
-.about-logo span { color: var(--color-accent-2); }
-.about-version { text-align: center; font-size: 12px; opacity: .48; }
-.about-section { display: flex; flex-direction: column; gap: 2px; }
-.about-label { font-size: 10px; opacity: .48; text-transform: uppercase; letter-spacing: .06em; }
-.about-val { font-size: 14px; font-weight: 600; }
-.about-val-sub { font-size: 12px; opacity: .62; }
+.about-logo span {
+  color: var(--color-accent-2);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--color-accent-2) 55%, transparent);
+}
+
+.about-version {
+  text-align: center;
+  font-size: 11px;
+  opacity: .45;
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+
+.about-divider {
+  height: 1px;
+  background: var(--color-border);
+  width: 100%;
+  border-radius: 1px;
+  margin: 2px 0;
+}
+
+.about-section { display: flex; flex-direction: column; gap: 4px; }
+
+.about-label {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .48;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.about-val     { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.about-val-sub { font-size: 12px; opacity: .60; line-height: 1.5; }
+
+.about-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.about-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-accent-1) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-1) 25%, transparent);
+  color: var(--color-accent-1);
+  white-space: nowrap;
+}
 
 /* ══════════════════════════════════════
    TUTORIAL
@@ -913,10 +1282,28 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   width: 100%;
   max-width: 440px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .tut-step-indicator { font-size: 12px; opacity: .62; }
+
+.tut-progress-bar-wrap {
+  width: 100%;
+  max-width: 440px;
+  height: 4px;
+  background: rgba(255,255,255,.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.tut-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent-1), var(--color-accent-2));
+  border-radius: 4px;
+  width: 0%;
+  transition: width .4s cubic-bezier(.4,0,.2,1);
+}
 
 .tut-instruction-box {
   width: 100%;
@@ -929,9 +1316,18 @@ input[type="range"]::-moz-range-thumb {
   font-size: 14px;
   line-height: 1.65;
   margin-bottom: 14px;
+  min-height: 60px;
 }
 
-.tut-board-wrap { width: 100%; max-width: 280px; margin: 0 auto 14px; }
+.tut-board-wrap {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 14px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .tut-board {
   display: grid;
@@ -945,6 +1341,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: calc(var(--cell-radius, 16px) + 4px);
   overflow: hidden;
   border: 2px solid color-mix(in srgb, var(--color-accent-1) 22%, transparent);
+  width: 100%;
 }
 
 .tut-cell {
@@ -953,22 +1350,26 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: clamp(22px, 8vw, 36px);
   font-weight: 800;
   cursor: pointer;
   transition: background var(--transition);
 }
 
-.tut-cell:hover {
-  background: color-mix(in srgb, var(--color-accent-1) 14%, var(--cell-bg));
-}
-
+.tut-cell:hover { background: color-mix(in srgb, var(--color-accent-1) 14%, var(--cell-bg)); }
 .tut-cell.player-x { color: var(--color-accent-1); }
 .tut-cell.player-o { color: var(--color-accent-2); }
-.tut-controls { display: flex; gap: 10px; margin-bottom: 7px; }
 
-.tut-cell.demo-x { color: var(--color-accent-1); opacity: .7; }
-.tut-cell.demo-o { color: var(--color-accent-2); opacity: .7; }
+.tut-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 7px;
+  width: 100%;
+  max-width: 440px;
+  justify-content: center;
+}
+.tut-controls .btn-action { flex: 1; max-width: 140px; }
+
 .tut-cell.demo-win {
   background: color-mix(in srgb, var(--color-accent-1) 20%, var(--cell-bg)) !important;
   animation: winner-pulse .6s ease-out;
@@ -985,9 +1386,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ══════════════════════════════════════
-   LIGHT MODE BOARD OVERRIDES
-   (placed here so they're near the board
-   rules they override)
+   LIGHT MODE OVERRIDES
 ══════════════════════════════════════ */
 .light-mode {
   --cell-bg: #f0f4ff;
@@ -997,34 +1396,20 @@ input[type="range"]::-moz-range-thumb {
 .light-mode .classic-board,
 .light-mode .tut-board,
 .light-mode .replay-board {
-  background: color-mix(
-    in srgb,
-    #1a73e8 calc(var(--grid-line-opacity) * 70%),
-    rgba(0,0,0,.18)
-  );
+  background: color-mix(in srgb, #1a73e8 calc(var(--grid-line-opacity) * 70%), rgba(0,0,0,.18));
   border-color: color-mix(in srgb, #1a73e8 35%, rgba(0,0,0,.2));
 }
 
 .light-mode .ultimate-board {
-  background: color-mix(
-    in srgb,
-    #1a73e8 calc(var(--outer-grid-opacity) * 65%),
-    rgba(0,0,0,.2)
-  );
+  background: color-mix(in srgb, #1a73e8 calc(var(--outer-grid-opacity) * 65%), rgba(0,0,0,.2));
   border-color: color-mix(in srgb, #1a73e8 40%, rgba(0,0,0,.25));
 }
 
 .light-mode .local-board {
-  background: color-mix(
-    in srgb,
-    #1a73e8 calc(var(--inner-grid-opacity) * 55%),
-    rgba(0,0,0,.1)
-  );
+  background: color-mix(in srgb, #1a73e8 calc(var(--inner-grid-opacity) * 55%), rgba(0,0,0,.1));
 }
 
-.light-mode .local-board-won-overlay {
-  background: rgba(220, 232, 255, .88);
-}
+.light-mode .local-board-won-overlay { background: rgba(220,232,255,.88); }
 
 .light-mode .classic-cell,
 .light-mode .tut-cell,
@@ -1039,24 +1424,22 @@ input[type="range"]::-moz-range-thumb {
   background: color-mix(in srgb, #1a73e8 12%, var(--cell-bg));
 }
 
-.light-mode .classic-cell.winner {
-  background: color-mix(in srgb, #1a73e8 18%, var(--cell-bg));
-}
+.light-mode .classic-cell.winner { background: color-mix(in srgb, #1a73e8 18%, var(--cell-bg)); }
 
-.light-mode .stats-graph {
-  background: rgba(255,255,255,.72);
-  border-color: rgba(26,115,232,.15);
-}
+.light-mode .stats-graph    { background: rgba(255,255,255,.72); border-color: rgba(26,115,232,.15); }
+.light-mode .about-content  { background: rgba(255,255,255,.78); border-color: rgba(26,115,232,.15); }
+.light-mode .about-val      { color: #182040; }
+.light-mode .about-tag      { background: color-mix(in srgb,#1a73e8 10%,transparent); border-color: color-mix(in srgb,#1a73e8 22%,transparent); color: #1a73e8; }
 
-.light-mode .ach-item {
-  background: rgba(255,255,255,.72);
-  border-color: rgba(26,115,232,.12);
-}
+.light-mode .ach-item         { background: rgba(255,255,255,.72); border-color: rgba(26,115,232,.12); }
 .light-mode .ach-item.unlocked {
   border-color: color-mix(in srgb,#0f9d58 40%,transparent);
   background: color-mix(in srgb,#0f9d58 6%,rgba(255,255,255,.8));
 }
 
+.light-mode .tut-progress-bar-wrap { background: rgba(0,0,0,.08); }
+.light-mode .tut-instruction-box   { border-left-color: #1a73e8; background: rgba(255,255,255,.78); color: #182040; }
+
 .light-mode .settings-list,
-.light-mode .settings-section-title { color: #182040; opacity:1; }
-.light-mode .settings-section-title { opacity:.55; }
+.light-mode .settings-section-title { color: #182040; opacity: 1; }
+.light-mode .settings-section-title { opacity: .55; }

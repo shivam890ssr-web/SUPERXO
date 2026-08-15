@@ -281,6 +281,8 @@
     </div>
     <div class="ultimate-board" id="ultimateBoard" role="grid" aria-label="Ultimate game board"></div>
     <div class="game-actions">
+      <button class="btn-action" id="ultimateUndoBtn" aria-label="Undo last move" disabled>↩ Undo</button>
+      <button class="btn-action" id="ultimateHintBtn" aria-label="Get hint">💡 Hint <span id="ultimateHintCount">(3)</span></button>
       <button class="btn-action" id="ultimateRestartBtn" aria-label="Restart game">🔄 Restart</button>
       <button class="btn-action" id="ultimateReplayBtn" aria-label="View replay" disabled>▶ Replay</button>
     </div>
@@ -364,6 +366,44 @@
         <button class="toggle-switch" id="toggleMusic" role="switch" aria-checked="true" aria-label="Music">
           <span class="toggle-thumb"></span>
         </button>
+      </div>
+
+      <!-- ── Custom BGM ── -->
+      <div class="settings-section-title">Background Music</div>
+      <div class="bgm-section" id="bgmSection">
+
+        <!-- Track loaded state (hidden by default, shown when track exists) -->
+        <div class="bgm-track-row" id="bgmTrackRow" style="display:none">
+          <div class="bgm-track-info">
+            <span class="bgm-track-icon">🎵</span>
+            <span class="bgm-track-name" id="bgmTrackName">No track</span>
+          </div>
+          <div class="bgm-track-controls">
+            <button class="bgm-btn bgm-play-btn" id="bgmPlayBtn" aria-label="Play/Pause music">▶</button>
+            <button class="bgm-btn bgm-remove-btn" id="bgmRemoveBtn" aria-label="Remove track">✕</button>
+          </div>
+        </div>
+
+        <!-- Volume slider (shown when track exists) -->
+        <div class="setting-row bgm-volume-row" id="bgmVolumeRow" style="display:none">
+          <span class="setting-label">Volume</span>
+          <div class="bgm-volume-wrap">
+            <span class="bgm-vol-icon">🔈</span>
+            <input type="range" id="bgmVolume" min="0" max="100" value="35" aria-label="Music volume">
+            <span class="bgm-vol-icon">🔊</span>
+          </div>
+        </div>
+
+        <!-- Upload button (always shown) -->
+        <div class="bgm-upload-row">
+          <label class="bgm-upload-btn" for="bgmFileInput" aria-label="Upload music file">
+            <span>📂</span>
+            <span id="bgmUploadLabel">Choose Music File</span>
+          </label>
+          <input type="file" id="bgmFileInput" accept="audio/*,.mp3,.ogg,.wav,.aac,.flac,.m4a" style="display:none" aria-label="Music file picker">
+          <p class="bgm-hint">MP3, OGG, WAV, AAC, FLAC supported</p>
+        </div>
+
       </div>
       <div class="setting-row">
         <span class="setting-label">Default Timer</span>
@@ -490,29 +530,57 @@
   <div id="aboutScreen" class="screen screen-card" style="display:none">
     <h2>ℹ️ About</h2>
     <div class="about-content">
-      <div class="about-logo">SUPER<span>XO</span></div>
-      <div class="about-version" id="aboutVersion">Version 1.0.0</div>
+      <div class="about-logo-wrap">
+        <div class="about-logo">SUPER<span>XO</span></div>
+        <div class="about-version" id="aboutVersion">Version 1.0.0</div>
+      </div>
+
+      <div class="about-divider"></div>
+
       <div class="about-section">
-        <p class="about-label">Developer</p>
+        <p class="about-label">👨‍💻 Developer</p>
         <p class="about-val">Shivam Singh Rajpoot</p>
       </div>
       <div class="about-section">
-        <p class="about-label">Institution</p>
-        <p class="about-val">Madhav Institute of Technology and Science</p>
-        <p class="about-val-sub">MITS Gwalior</p>
+        <p class="about-label">🏛️ Institution</p>
+        <p class="about-val">Madhav Institute of Technology &amp; Science</p>
+        <p class="about-val-sub">MITS Gwalior, Madhya Pradesh</p>
       </div>
       <div class="about-section">
-        <p class="about-label">Degree</p>
-        <p class="about-val">B.Tech — Mathematics and Computing</p>
+        <p class="about-label">🎓 Degree</p>
+        <p class="about-val">B.Tech — Mathematics &amp; Computing</p>
       </div>
+
+      <div class="about-divider"></div>
+
       <div class="about-section">
-        <p class="about-label">Credits</p>
-        <p class="about-val">Built with HTML, CSS &amp; Vanilla JavaScript</p>
+        <p class="about-label">🛠️ Tech Stack</p>
+        <p class="about-val">HTML · CSS · Vanilla JavaScript</p>
         <p class="about-val-sub">No frameworks. No libraries. Pure craft.</p>
       </div>
       <div class="about-section">
-        <p class="about-label">Privacy</p>
-        <p class="about-val-sub">All data is stored locally on your device. No information is collected or transmitted.</p>
+        <p class="about-label">🎮 Features</p>
+        <div class="about-features">
+          <span class="about-tag">Classic Mode</span>
+          <span class="about-tag">Ultimate Mode</span>
+          <span class="about-tag">AI Opponents</span>
+          <span class="about-tag">Themes</span>
+          <span class="about-tag">Achievements</span>
+          <span class="about-tag">Statistics</span>
+          <span class="about-tag">PWA Ready</span>
+          <span class="about-tag">Offline</span>
+        </div>
+      </div>
+
+      <div class="about-divider"></div>
+
+      <div class="about-section">
+        <p class="about-label">🔒 Privacy</p>
+        <p class="about-val-sub">All data is stored locally on your device. Nothing is collected or transmitted.</p>
+      </div>
+      <div class="about-section">
+        <p class="about-label">© 2024–2026 Shivam Singh Rajpoot</p>
+        <p class="about-val-sub">Built with passion for strategy gaming.</p>
       </div>
     </div>
     <button class="btn-back" data-back aria-label="Back">← Back</button>

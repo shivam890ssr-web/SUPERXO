@@ -35,7 +35,7 @@ const DEFAULTS = {
     innerGridOpacity: 0.12,
   },
   pieceColors: { x: '#2dd4ff', o: '#7dff74' },
-  unlockedThemes: ['classic'],
+  unlockedThemes: ['classic', 'neon'],
   unlockedColorPacks: [],
   coins: 0,
   statistics: {

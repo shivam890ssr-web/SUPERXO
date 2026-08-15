@@ -9,7 +9,7 @@ import { Statistics } from './statistics.js';
 import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
-import { showDialog, showToast, navigate, updateTurnGlow } from './main.js';
+import { showDialog, showToast, navigate, navigateClean, updateTurnGlow } from './main.js';
 
 const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -25,7 +25,7 @@ function defaultState() {
     boards: Array(9).fill(null).map(() => Array(9).fill(null)),
     boardWinners: Array(9).fill(null),
     globalBoard: Array(9).fill(null),
-    activeBoard: null, // null = any open board allowed
+    activeBoard: null,
     currentPlayer: 'X',
     gameOver: false,
     scores: { X: 0, O: 0, draw: 0 },
@@ -38,6 +38,7 @@ function defaultState() {
     players: { X: 'Player 1', O: 'Player 2' },
     timerEnabled: false,
     timerDuration: 30,
+    hintsRemaining: 3,   // 3 hints per game
   };
 }
 
@@ -80,21 +81,24 @@ function buildBoard() {
 
 function initDOM() {
   dom = {
-    container: document.getElementById('ultimateBoard'),
-    p1Name: document.getElementById('ultimateP1Name'),
-    p2Name: document.getElementById('ultimateP2Name'),
-    scoreX: document.getElementById('ultimateScoreX'),
-    scoreO: document.getElementById('ultimateScoreO'),
-    scoreDraw: document.getElementById('ultimateScoreDraw'),
-    turnIndicator: document.getElementById('ultimateTurnIndicator'),
-    turnText: document.getElementById('ultimateTurnText'),
+    container:    document.getElementById('ultimateBoard'),
+    p1Name:       document.getElementById('ultimateP1Name'),
+    p2Name:       document.getElementById('ultimateP2Name'),
+    scoreX:       document.getElementById('ultimateScoreX'),
+    scoreO:       document.getElementById('ultimateScoreO'),
+    scoreDraw:    document.getElementById('ultimateScoreDraw'),
+    turnIndicator:document.getElementById('ultimateTurnIndicator'),
+    turnText:     document.getElementById('ultimateTurnText'),
     timerDisplay: document.getElementById('ultimateTimerDisplay'),
-    timerRing: document.getElementById('ultimateTimerRing'),
-    timerCount: document.getElementById('ultimateTimerCount'),
-    aiThinking: document.getElementById('uAiThinking'),
-    restartBtn: document.getElementById('ultimateRestartBtn'),
-    replayBtn: document.getElementById('ultimateReplayBtn'),
-    backBtn: document.getElementById('ultimateBackBtn'),
+    timerRing:    document.getElementById('ultimateTimerRing'),
+    timerCount:   document.getElementById('ultimateTimerCount'),
+    aiThinking:   document.getElementById('uAiThinking'),
+    undoBtn:      document.getElementById('ultimateUndoBtn'),
+    hintBtn:      document.getElementById('ultimateHintBtn'),
+    hintCount:    document.getElementById('ultimateHintCount'),
+    restartBtn:   document.getElementById('ultimateRestartBtn'),
+    replayBtn:    document.getElementById('ultimateReplayBtn'),
+    backBtn:      document.getElementById('ultimateBackBtn'),
   };
 }
 
@@ -114,6 +118,7 @@ function init(config) {
   buildBoard();
   renderAll();
   dom.replayBtn.disabled = true;
+  updateActionButtons();
 
   if (state.timerEnabled) {
     if (dom.timerDisplay) dom.timerDisplay.style.display = '';
@@ -314,7 +319,7 @@ function endGame(result) {
   if (result !== 'draw') spawnConfetti();
   showDialog('Game Over', `${resultName}${coinMsg}\n\n${durationMsg}`, [
     { label: '🔄 Rematch', action: () => restartGame() },
-    { label: '🏠 Menu', action: () => navigate('gameSelectScreen') },
+    { label: '🏠 Menu', action: () => navigateClean('gameSelectScreen') },
     { label: '▶ Replay', action: () => openReplay() },
   ]);
 }
@@ -349,10 +354,153 @@ function scheduleAIMove() {
   }, delay);
 }
 
+// ── Action button state ───────────────────────────────
+function updateActionButtons() {
+  if (!dom.undoBtn) return;
+  const isHvH = !state.vsAI;
+  // Undo: only HvH, at least one move played, game not over
+  dom.undoBtn.disabled = !(isHvH && state.moveHistory.length > 0 && !state.gameOver);
+  // Hint: game not over, hints remaining
+  if (dom.hintBtn)   dom.hintBtn.disabled = state.gameOver || state.hintsRemaining <= 0;
+  if (dom.hintCount) dom.hintCount.textContent = `(${state.hintsRemaining})`;
+}
+
+// ── Undo ─────────────────────────────────────────────
+function undo() {
+  if (state.vsAI || state.moveHistory.length === 0 || state.gameOver) return;
+
+  const last = state.moveHistory.pop();
+  if (!last) return;
+
+  // Clear the cell
+  state.boards[last.localBoard][last.cell] = null;
+
+  // We need to fully recompute boardWinners and globalBoard from scratch
+  // because undoing a move might un-win a local board
+  state.boardWinners = Array(9).fill(null);
+  state.globalBoard  = Array(9).fill(null);
+
+  for (let b = 0; b < 9; b++) {
+    const result = checkBoard(state.boards[b]);
+    if (result === 'X' || result === 'O') {
+      state.boardWinners[b] = result;
+      state.globalBoard[b]  = result;
+    } else if (result === 'draw') {
+      state.boardWinners[b] = 'draw';
+      state.globalBoard[b]  = 'draw';
+    }
+  }
+
+  // Restore activeBoard: it was determined by the move BEFORE last.
+  // Re-derive from the new last move in history.
+  if (state.moveHistory.length === 0) {
+    state.activeBoard = null; // first move — free choice
+  } else {
+    const prev = state.moveHistory[state.moveHistory.length - 1];
+    const targetBoard = prev.cell;
+    state.activeBoard = state.boardWinners[targetBoard] !== null ? null : targetBoard;
+  }
+
+  // Restore whose turn it is
+  state.currentPlayer = last.player;
+
+  renderAll();
+  updateActionButtons();
+  Sound.play('click');
+}
+
+// ── Hint ─────────────────────────────────────────────
+function requestHint() {
+  if (state.gameOver || state.hintsRemaining <= 0) return;
+
+  // Collect all playable cells
+  const playable = [];
+  for (let b = 0; b < 9; b++) {
+    for (let c = 0; c < 9; c++) {
+      if (isCellPlayable(b, c)) playable.push({ b, c });
+    }
+  }
+  if (playable.length === 0) return;
+
+  // Heuristic: find the best move
+  // Priority 1 — move that wins a local board immediately
+  // Priority 2 — AI best move within the most contested active board
+  // Priority 3 — random playable cell (fallback)
+  let hintBoard = -1;
+  let hintCell  = -1;
+
+  // Priority 1: find a winning move in any playable local board
+  for (const { b, c } of playable) {
+    const testBoard = [...state.boards[b]];
+    testBoard[c] = state.currentPlayer;
+    if (checkBoard(testBoard) === state.currentPlayer) {
+      hintBoard = b;
+      hintCell  = c;
+      break;
+    }
+  }
+
+  // Priority 2: use AI on the active board (or pick first active board)
+  if (hintBoard === -1) {
+    const activeBoardIdx = state.activeBoard !== null
+      ? state.activeBoard
+      : playable[0].b; // first available
+
+    const boardForAI = state.boards[activeBoardIdx];
+    const playableCells = boardForAI.map((v, i) =>
+      isCellPlayable(activeBoardIdx, i) ? i : null
+    ).filter(i => i !== null);
+
+    if (playableCells.length > 0) {
+      // Use AI engine on this local board
+      const aiIdx = AI.getBestMove([...boardForAI], 'impossible', state.currentPlayer);
+      if (aiIdx !== null && isCellPlayable(activeBoardIdx, aiIdx)) {
+        hintBoard = activeBoardIdx;
+        hintCell  = aiIdx;
+      } else {
+        hintBoard = activeBoardIdx;
+        hintCell  = playableCells[0];
+      }
+    }
+  }
+
+  // Fallback
+  if (hintBoard === -1) {
+    hintBoard = playable[0].b;
+    hintCell  = playable[0].c;
+  }
+
+  // Consume one hint
+  state.hintsRemaining--;
+  updateActionButtons();
+  Sound.play('click');
+
+  // Highlight the hinted cell
+  _clearHint();
+  const localEl = dom.container.querySelector(`.local-board[data-board="${hintBoard}"]`);
+  if (localEl) {
+    const cellEl = localEl.querySelector(`.ult-cell[data-cell="${hintCell}"]`);
+    if (cellEl) {
+      cellEl.classList.add('ult-hint-cell');
+      // Auto-clear after 2s
+      setTimeout(() => cellEl.classList.remove('ult-hint-cell'), 2000);
+    }
+  }
+
+  if (state.hintsRemaining <= 0) {
+    showToast('No hints left', 'You\'ve used all 3 hints for this game.');
+  }
+}
+
+function _clearHint() {
+  dom.container.querySelectorAll('.ult-hint-cell').forEach(el => el.classList.remove('ult-hint-cell'));
+}
+
 // ── Turn switch ───────────────────────────────────────
 function switchTurn() {
   state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
   updateTurnIndicator();
+  updateActionButtons();
   if (state.timerEnabled) startTurnTimer();
   if (state.vsAI && state.currentPlayer === state.aiPlayer) scheduleAIMove();
 }
@@ -410,16 +558,38 @@ function spawnConfetti() {
 
 // ── Event wiring ──────────────────────────────────────
 export function wireUltimateEvents() {
+  document.getElementById('ultimateUndoBtn').addEventListener('click', () => undo());
+
+  document.getElementById('ultimateHintBtn').addEventListener('click', () => {
+    if (state.hintsRemaining <= 0) {
+      showDialog('No Hints Left', 'You have used all 3 hints for this game.', [
+        { label: 'OK', action: null },
+      ]);
+      Sound.play('error');
+      return;
+    }
+    requestHint();
+  });
+
   document.getElementById('ultimateRestartBtn').addEventListener('click', () => {
     showDialog('Restart Game', 'Are you sure?', [
       { label: 'Yes', action: () => restartGame() },
       { label: 'No', action: null },
     ]);
   });
+
   document.getElementById('ultimateReplayBtn').addEventListener('click', () => openReplay());
+
   document.getElementById('ultimateBackBtn').addEventListener('click', () => {
     Timer.stop();
-    navigate('gameSelectScreen');
+    if (!state.gameOver && state.moveHistory.length > 0) {
+      showDialog('Leave Game?', 'Your current game progress will be lost.', [
+        { label: 'Leave', action: () => navigateClean('gameSelectScreen') },
+        { label: 'Stay', action: null },
+      ]);
+    } else {
+      navigateClean('gameSelectScreen');
+    }
   });
 }
 

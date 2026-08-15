@@ -6,26 +6,19 @@ import { Storage } from './storage.js';
 import { Theme } from './theme.js';
 import { Settings } from './settings.js';
 import { Sound } from './sound.js';
-import { Classic, wireClassicEvents, checkWinner } from './classic.js';
+import { Classic, wireClassicEvents } from './classic.js';
 import { Ultimate, wireUltimateEvents } from './ultimate.js';
 import { Statistics } from './statistics.js';
 import { Achievements } from './achievements.js';
 import { Replay } from './replay.js';
-import { Tutorial, wireTutorialScreenEvents } from './tutorial.js';
+import { wireTutorialScreenEvents } from './tutorial.js';
+import { Music } from './music.js';
 
 const APP_VERSION = '1.0.0';
 
 // ── Screen history stack ───────────────────────────────
 let _screenStack = [];
 let _currentScreen = null;
-
-const ALL_SCREENS = [
-  'splashScreen', 'homeScreen', 'gameSelectScreen',
-  'classicSetupScreen', 'classicGameScreen',
-  'ultimateSetupScreen', 'ultimateGameScreen',
-  'replayScreen', 'statisticsScreen', 'achievementsScreen',
-  'settingsScreen', 'tutorialScreen', 'tutorialActiveScreen', 'aboutScreen',
-];
 
 /**
  * Navigate to a screen.
@@ -61,6 +54,27 @@ export function navigate(screenId, direction = 'forward') {
   Sound.play('click');
 }
 
+/**
+ * Navigate to a screen and wipe all game-related screens from the history
+ * stack so Back never returns to a finished/left game.
+ *
+ * Use this when leaving a game screen (back button, menu button after match).
+ * @param {string} screenId
+ */
+export function navigateClean(screenId) {
+  const GAME_SCREENS = [
+    'classicGameScreen', 'ultimateGameScreen',
+    'classicSetupScreen', 'ultimateSetupScreen',
+    'replayScreen',
+  ];
+  // 1. Strip all game screens from history
+  _screenStack = _screenStack.filter(s => !GAME_SCREENS.includes(s));
+
+  // 2. Use direction='back' so navigate() does NOT push the current
+  //    game screen onto the stack before switching
+  navigate(screenId, 'back');
+}
+
 /** Navigate back one level. */
 export function navigateBack() {
   const prev = _screenStack.pop();
@@ -72,8 +86,6 @@ function onScreenEnter(screenId) {
   switch (screenId) {
     case 'homeScreen':
       refreshHomeCoins();
-      // Auto-unlock any themes earned so far
-      Theme.checkUnlocks(Statistics.get().played);
       break;
     case 'statisticsScreen':
       renderStatisticsScreen();
@@ -83,6 +95,7 @@ function onScreenEnter(screenId) {
       break;
     case 'settingsScreen':
       renderSettingsScreen();
+      refreshBgmUI();
       break;
     case 'replayScreen':
       renderReplayScreen();
@@ -96,6 +109,21 @@ function initApp() {
   Theme.apply(Theme.getCurrent());
   Settings.applyAll();
   applyBoardCustom();
+
+  // Initialise music (restores any previously loaded track from IndexedDB)
+  Music.init().then(() => {
+    refreshBgmUI();
+    // Apply saved music enabled state
+    const musicEnabled = Settings.get('music');
+    Music.setEnabled(musicEnabled !== false);
+  });
+
+  // Migrate: ensure Classic + Neon are always unlocked (free themes)
+  Theme.unlock('classic');
+  Theme.unlock('neon');
+
+  // Music state-change → keep Settings UI in sync
+  Music.onStateChange(() => refreshBgmUI());
 
   // Set version strings
   document.querySelectorAll('.splash-version, #settingsVersion, #aboutVersion').forEach(el => {
@@ -285,14 +313,16 @@ function wireSettingsEvents() {
     { id: 'toggleDarkMode', key: 'darkMode' },
     { id: 'toggleAnimations', key: 'animations' },
     { id: 'toggleSound', key: 'sound' },
-    { id: 'toggleMusic', key: 'music' },
+    {
+      id: 'toggleMusic', key: 'music',
+      onChange: (next) => Music.setEnabled(next),
+    },
     { id: 'toggleTimerDefault', key: 'timerDefault' },
   ];
 
-  toggles.forEach(({ id, key }) => {
+  toggles.forEach(({ id, key, onChange }) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    // Set initial state
     const val = Settings.get(key);
     btn.setAttribute('aria-checked', String(val !== false));
     btn.classList.toggle('on', val !== false);
@@ -304,6 +334,7 @@ function wireSettingsEvents() {
       btn.setAttribute('aria-checked', String(next));
       btn.classList.toggle('on', next);
       Settings.applyAll();
+      if (onChange) onChange(next);
       Sound.play('click');
     });
   });
@@ -428,6 +459,46 @@ function wireSettingsEvents() {
       { label: 'Cancel', action: null },
     ]);
   });
+
+  // ── BGM: file picker ──
+  const bgmInput = document.getElementById('bgmFileInput');
+  bgmInput?.addEventListener('change', async () => {
+    const file = bgmInput.files?.[0];
+    if (!file) return;
+    bgmInput.value = ''; // reset so same file can be re-selected
+    try {
+      const label = document.getElementById('bgmUploadLabel');
+      if (label) label.textContent = 'Loading…';
+      await Music.load(file);
+      showToast('Music loaded', `Now playing: ${file.name}`);
+    } catch {
+      showToast('Error', 'Could not load audio file. Try a different format.');
+    }
+  });
+
+  // ── BGM: play/pause ──
+  document.getElementById('bgmPlayBtn')?.addEventListener('click', () => {
+    Music.toggle();
+  });
+
+  // ── BGM: remove track ──
+  document.getElementById('bgmRemoveBtn')?.addEventListener('click', () => {
+    showDialog('Remove Music', 'Remove the current background music track?', [
+      {
+        label: 'Remove', action: async () => {
+          await Music.remove();
+          showToast('Music removed', '');
+        }
+      },
+      { label: 'Cancel', action: null },
+    ]);
+  });
+
+  // ── BGM: volume slider ──
+  const volSlider = document.getElementById('bgmVolume');
+  volSlider?.addEventListener('input', () => {
+    Music.setVolume(Number(volSlider.value) / 100);
+  });
 }
 
 function renderSettingsScreen() {
@@ -435,25 +506,82 @@ function renderSettingsScreen() {
   const stats = Statistics.get();
   Theme.checkUnlocks(stats.played);
 
-  // Theme grid
+  // Theme grid — list layout with cost + apply button
   const grid = document.getElementById('themeGrid');
   if (grid) {
     grid.innerHTML = '';
-    const stats = Statistics.get();
+    const coins = Storage.get('coins');
     Theme.getAll().forEach(theme => {
-      const unlocked = theme.unlockGames <= stats.played || Theme.isUnlocked(theme.id);
-      const btn = document.createElement('button');
-      btn.className = 'theme-btn' + (Theme.getCurrent() === theme.id ? ' active' : '') + (unlocked ? '' : ' locked');
-      btn.innerHTML = `<span class="theme-preview" style="background:${theme.vars['--color-accent-1']}"></span>${theme.name}${unlocked ? '' : ' 🔒'}`;
-      btn.setAttribute('aria-label', `${theme.name} theme${unlocked ? '' : ', locked'}`);
-      btn.disabled = !unlocked;
-      btn.addEventListener('click', () => {
-        if (!unlocked) { showToast('Locked', `Play ${theme.unlockGames} games to unlock.`); return; }
-        Theme.apply(theme.id);
-        renderSettingsScreen();
-        Sound.play('click');
-      });
-      grid.appendChild(btn);
+      const owned  = Theme.isUnlocked(theme.id);
+      const active = Theme.getCurrent() === theme.id;
+      const canBuy = !owned && coins >= theme.coinCost;
+
+      const row = document.createElement('div');
+      row.className = 'theme-row' + (active ? ' theme-row-active' : '') + (!owned ? ' theme-row-locked' : '');
+
+      row.innerHTML = `
+        <span class="theme-row-dot" style="background:${theme.vars['--color-accent-1']};box-shadow:0 0 8px ${theme.vars['--color-accent-1']}"></span>
+        <div class="theme-row-info">
+          <span class="theme-row-name">${theme.name}</span>
+          <span class="theme-row-desc">${theme.description}</span>
+        </div>
+        <div class="theme-row-right">
+          ${owned
+            ? `<button class="theme-row-btn ${active ? 'theme-row-btn-active' : 'theme-row-btn-apply'}"
+                       ${active ? 'disabled' : ''}
+                       aria-label="${active ? 'Currently active' : 'Apply ' + theme.name + ' theme'}">
+                 ${active ? '✓ Active' : 'Apply'}
+               </button>`
+            : `<span class="theme-row-cost">🪙 ${theme.coinCost}</span>
+               <button class="theme-row-btn theme-row-btn-buy ${canBuy ? '' : 'theme-row-btn-cant'}"
+                       aria-label="Buy ${theme.name} theme for ${theme.coinCost} coins">
+                 Buy
+               </button>`
+          }
+        </div>
+      `;
+
+      // Wire the button
+      const btn = row.querySelector('.theme-row-btn');
+      if (btn && !btn.disabled) {
+        btn.addEventListener('click', () => {
+          if (owned) {
+            // Apply
+            Theme.apply(theme.id);
+            renderSettingsScreen();
+            Sound.play('click');
+          } else if (canBuy) {
+            // Confirm purchase
+            showDialog(
+              `Buy ${theme.name}?`,
+              `Unlock the ${theme.name} theme for ${theme.coinCost} 🪙?\n\nYou have ${coins} 🪙.`,
+              [
+                {
+                  label: `Buy — ${theme.coinCost} 🪙`,
+                  action: () => {
+                    const result = Theme.purchase(theme.id);
+                    if (result.success) {
+                      Theme.apply(theme.id);
+                      renderSettingsScreen();
+                      refreshHomeCoins();
+                      showToast(`${theme.name} unlocked!`, 'Theme applied.');
+                      Sound.play('unlock');
+                    } else {
+                      showToast('Could not purchase', result.reason || '');
+                    }
+                  },
+                },
+                { label: 'Cancel', action: null },
+              ]
+            );
+          } else {
+            showToast('Not enough coins', `You need ${theme.coinCost} 🪙 to unlock ${theme.name}.`);
+            Sound.play('error');
+          }
+        });
+      }
+
+      grid.appendChild(row);
     });
   }
 
@@ -541,6 +669,26 @@ function renderSettingsScreen() {
   const coins = Storage.get('coins');
   const achBal = document.getElementById('achCoinBalance');
   if (achBal) achBal.textContent = coins;
+}
+
+// ── BGM UI refresh ────────────────────────────────────
+function refreshBgmUI() {
+  const hasTrack   = Music.hasTrack();
+  const trackRow   = document.getElementById('bgmTrackRow');
+  const volRow     = document.getElementById('bgmVolumeRow');
+  const trackName  = document.getElementById('bgmTrackName');
+  const playBtn    = document.getElementById('bgmPlayBtn');
+  const uploadLabel = document.getElementById('bgmUploadLabel');
+  const volSlider  = document.getElementById('bgmVolume');
+
+  if (trackRow)  trackRow.style.display  = hasTrack ? '' : 'none';
+  if (volRow)    volRow.style.display    = hasTrack ? '' : 'none';
+
+  if (trackName)  trackName.textContent  = Music.getTrackName() || 'Unknown Track';
+  if (playBtn)    playBtn.textContent    = Music.isPlaying() ? '⏸' : '▶';
+  if (playBtn)    playBtn.setAttribute('aria-label', Music.isPlaying() ? 'Pause music' : 'Play music');
+  if (uploadLabel) uploadLabel.textContent = hasTrack ? 'Change Music File' : 'Choose Music File';
+  if (volSlider)  volSlider.value        = Math.round(Music.getVolume() * 100);
 }
 
 function applyBoardCustom() {

@@ -35,7 +35,7 @@
 
 html { scroll-behavior: smooth; }
 
-html, body {
+html {
   height: 100%;
   font-family: var(--font);
   color: var(--color-text);
@@ -43,12 +43,16 @@ html, body {
 }
 
 body {
+  /* min-height not height — allows body to grow taller than viewport for scrolling */
   min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   background: radial-gradient(ellipse at 30% 0%, var(--color-bg-1) 0%, var(--color-bg-2) 65%);
   overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--font);
+  color: var(--color-text);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
@@ -70,15 +74,49 @@ body::after {
 
 /* ── Screens ── */
 .screen {
-  position:relative;z-index:2;
-  width:100%;max-width:520px;margin:0 auto;
-  min-height:100dvh;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:flex-start;
-  padding:20px 14px 48px;
+  position: relative; z-index: 2;
+  width: 100%; max-width: 520px; margin: 0 auto;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  padding: 20px 14px 48px;
 }
-.screen-card { justify-content:center; }
-.screen-card>*:not(.btn-back) { width:100%;max-width:440px; }
+
+/*
+ * screen-card: Settings, Stats, Achievements, Tutorial, About.
+ *
+ * These screens have more content than fits on one phone screen.
+ * Strategy: make the screen take exactly the viewport height and
+ * scroll its own content internally. This is reliable across all
+ * mobile browsers — no reliance on body scroll behaviour.
+ */
+.screen-card {
+  /* Lock to viewport height */
+  height: 100dvh;
+  min-height: unset;
+  /* Scroll internally */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Align from top with consistent padding */
+  justify-content: flex-start;
+  padding-top: 24px;
+  padding-bottom: 32px;
+  /* Smooth momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Hide scrollbar visually on mobile but keep it functional */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Webkit scrollbar styling */
+.screen-card::-webkit-scrollbar { width: 4px; }
+.screen-card::-webkit-scrollbar-track { background: transparent; }
+.screen-card::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.screen-card > *:not(.btn-back) { width: 100%; max-width: 440px; }
 
 /* ── Logo ── */
 .logo {
@@ -413,13 +451,16 @@ select option { background:#0f1828;color:white; }
 .light-mode select option { background: #f0f4ff; color: #182040; }
 
 .light-mode .theme-btn {
-  background: rgba(255,255,255,.65);
-  border-color: rgba(26,115,232,.14);
-  color: #182040;
+  /* now handled by .theme-row rules in game.css */
+}
+.light-mode .theme-btn:hover {
+  /* now handled by .theme-row rules in game.css */
 }
 .light-mode .theme-btn.active {
-  border-color: #1a73e8;
-  background: color-mix(in srgb,#1a73e8 12%,rgba(255,255,255,.9));
+  /* now handled by .theme-row rules in game.css */
+}
+.light-mode .theme-btn.locked .theme-btn-status {
+  /* now handled by .theme-row rules in game.css */
 }
 
 .light-mode .toast {

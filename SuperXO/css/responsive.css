@@ -1,114 +1,165 @@
 /* ═══════════════════════════════════════════
-   responsive.css — 320px → 1920px
-   Board sizing is handled with min() so it
-   NEVER overflows regardless of breakpoint.
+   responsive.css — 320px → 1920px+
+   All board sizing uses min() / CSS custom
+   properties so nothing ever overflows.
 ═══════════════════════════════════════════ */
 
 /* ── Base container widths ── */
-.screen         { max-width: 520px; margin: 0 auto; }
+.screen          { max-width: 520px; margin: 0 auto; }
 .screen-ultimate { max-width: 580px; }
 
-/* ══════════════════════════════════
+/* ── Global safety net ── */
+img, svg, video, canvas, input { max-width: 100%; }
+
+/* ══════════════════════════════════════════
    320px – 359px  (tiny phone)
-══════════════════════════════════ */
+   Everything needs to compress but stay usable
+══════════════════════════════════════════ */
 @media (max-width: 359px) {
-  .logo { font-size: clamp(32px, 10vw, 46px); }
-  h2 { font-size: clamp(16px, 5vw, 22px); }
 
+  /* Home */
+  .logo       { font-size: clamp(30px, 9.5vw, 44px); }
+  .subtitle   { font-size: 12px; margin-bottom: 16px; }
+  .btn-play   { padding: 13px; font-size: 15px; margin-bottom: 16px; }
+  .home-menu  { gap: 7px; }
+  .btn-menu   { padding: 11px 14px; font-size: 13px; min-height: 44px; }
+  .home-coin-bar, .ach-coin-bar { font-size: 13px; }
+
+  /* Game select */
+  .game-select-sub   { display: none; }
+  .game-select-cards { gap: 8px; }
+  .game-select-card  { padding: 13px 12px 11px; gap: 3px; }
+  .gsc-icon          { font-size: 18px; }
+  .gsc-title         { font-size: 16px; }
+  .gsc-desc          { font-size: 11px; }
+  .gsc-tags span     { font-size: 9px; padding: 2px 5px; }
+  .gsc-arrow         { font-size: 11px; margin-top: 3px; }
+
+  /* Classic board — fills screen minus 24px padding */
   .classic-board { width: calc(100vw - 24px); }
-  .classic-cell  { font-size: clamp(20px, 11vw, 38px); }
+  .classic-cell  { font-size: clamp(18px, 10.5vw, 34px); }
 
-  .ultimate-board { width: calc(100vw - 16px); gap: 1px; }
-  .local-board    { padding: 1px; gap: 1px; }
-  .ult-cell       { font-size: clamp(6px, 2.6vw, 10px); }
-  .local-board-won-overlay { font-size: clamp(16px, 5.5vw, 26px); }
+  /*
+   * Ultimate board on 320px:
+   * Use 12px padding each side → 296px board max.
+   * Override --ult-board-size for this breakpoint.
+   */
+  :root { --ult-board-size: calc(100vw - 24px); }
+  .ultimate-board  { gap: 1px; border-width: 2px; }
+  .local-board     { padding: 1px; }
 
+  /* Shared game UI */
+  h2              { font-size: clamp(16px, 5vw, 22px); }
+  .score-val      { font-size: 15px; }
+  .score-name     { font-size: 9px; }
+  .timer-ring     { width: 34px; height: 34px; font-size: 12px; }
+  .turn-indicator { font-size: 12px; padding: 7px 10px; }
+  .btn-action     { padding: 6px 7px; font-size: 10px; min-height: 36px; }
+  .game-actions   { gap: 4px; }
+  .btn-back, .btn-primary { font-size: 13px; padding: 11px; }
+
+  /* Dialogs */
   .dialog-box     { padding: 18px 12px; }
   .dialog-actions { flex-direction: column; }
   .dialog-btn     { width: 100%; }
 
-  .stats-grid     { grid-template-columns: 1fr; }
-  .theme-grid     { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
-  .setup-form     { padding: 14px 10px; }
-  .score-val      { font-size: 16px; }
-  .score-name     { font-size: 9px; }
-  .btn-action     { padding: 6px 8px; font-size: 10px; }
-  .game-actions   { gap: 4px; }
-  .turn-indicator { font-size: 12px; padding: 7px 10px; }
-  .btn-back, .btn-primary { font-size: 13px; padding: 11px; }
+  /* Stats */
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-val   { font-size: 18px; }
+
+  /* Settings */
+  .theme-grid  { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+  .setup-form  { padding: 13px 10px; gap: 10px; }
+
+  /* Achievements */
+  .ach-list { max-height: calc(100dvh - 190px); }
+  .ach-item { padding: 9px 10px; }
+  .ach-icon { font-size: 22px; }
+  .ach-name { font-size: 13px; }
 }
 
-/* ══════════════════════════════════
-   360px – 479px  (standard phone)
-══════════════════════════════════ */
-@media (min-width: 360px) and (max-width: 479px) {
-  .logo { font-size: clamp(34px, 10.5vw, 50px); }
-  h2 { font-size: clamp(18px, 5.5vw, 26px); }
+/* ══════════════════════════════════════════
+   360px – 389px  (standard small phone)
+══════════════════════════════════════════ */
+@media (min-width: 360px) and (max-width: 389px) {
+  .logo     { font-size: clamp(33px, 10vw, 48px); }
+  .btn-play { padding: 14px; font-size: 16px; }
 
+  :root { --ult-board-size: min(340px, calc(100vw - 20px)); }
   .classic-board { width: min(320px, calc(100vw - 28px)); }
-  .classic-cell  { font-size: clamp(22px, 10vw, 42px); }
+  .classic-cell  { font-size: clamp(22px, 10vw, 40px); }
+  .ultimate-board { gap: 2px; }
+  .local-board    { padding: 1px; }
 
-  .ultimate-board { width: min(340px, calc(100vw - 20px)); gap: 2px; }
-  .local-board    { padding: 2px; gap: 1px; }
-  .ult-cell       { font-size: clamp(7px, 2.8vw, 12px); }
-  .local-board-won-overlay { font-size: clamp(18px, 6vw, 30px); }
-
-  .dialog-box     { padding: 20px 14px; }
   .dialog-actions { flex-direction: column; }
   .dialog-btn     { width: 100%; }
-
-  .stats-grid { grid-template-columns: 1fr; }
-  .theme-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
-  .setup-form { padding: 15px 12px; }
-  .score-val  { font-size: 18px; }
-  .score-name { font-size: 10px; }
-  .btn-action { padding: 7px 9px; font-size: 11px; }
-  .game-actions { gap: 5px; }
-  .turn-indicator { font-size: 13px; padding: 8px 12px; }
-  .home-coin-bar, .ach-coin-bar { font-size: 15px; }
+  .stats-grid     { grid-template-columns: 1fr; }
+  .setup-form     { padding: 14px 12px; }
+  .score-val      { font-size: 17px; }
   .btn-back, .btn-primary { font-size: 14px; padding: 12px; }
 }
 
-/* ══════════════════════════════════
-   390px – 430px  (iPhone Pro range)
-══════════════════════════════════ */
+/* ══════════════════════════════════════════
+   390px – 479px  (iPhone Pro / standard phone)
+══════════════════════════════════════════ */
 @media (min-width: 390px) and (max-width: 479px) {
-  .classic-board { width: min(340px, calc(100vw - 28px)); }
-  .classic-cell  { font-size: clamp(24px, 10vw, 44px); }
-  .ultimate-board { width: min(360px, calc(100vw - 20px)); }
-  .ult-cell { font-size: clamp(8px, 3vw, 13px); }
+  .logo     { font-size: clamp(35px, 10.5vw, 52px); }
+  .btn-play { padding: 15px; font-size: 17px; }
+
+  :root { --ult-board-size: min(364px, calc(100vw - 20px)); }
+  .classic-board  { width: min(348px, calc(100vw - 28px)); }
+  .classic-cell   { font-size: clamp(24px, 10vw, 44px); }
+  .ultimate-board { gap: 2px; }
+  .local-board    { padding: 2px; }
+
+  .dialog-actions { flex-direction: column; }
+  .dialog-btn     { width: 100%; }
+  .stats-grid     { grid-template-columns: 1fr; }
+  .score-val      { font-size: 18px; }
+  .score-name     { font-size: 10px; }
+  .setup-form     { padding: 15px 12px; }
+  .btn-action     { padding: 7px 9px; font-size: 11px; }
+  .btn-back, .btn-primary { font-size: 14px; padding: 12px; }
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════
    480px – 767px  (large phone / small tablet)
-══════════════════════════════════ */
+══════════════════════════════════════════ */
 @media (min-width: 480px) and (max-width: 767px) {
-  .classic-board  { width: min(300px, calc(100vw - 40px)); }
+  :root { --ult-board-size: min(420px, calc(100vw - 32px)); }
+  .classic-board  { width: min(320px, calc(100vw - 40px)); }
   .classic-cell   { font-size: clamp(26px, 8vw, 48px); }
-  .ultimate-board { width: min(420px, calc(100vw - 32px)); }
-  .ult-cell       { font-size: clamp(10px, 3vw, 16px); }
-  .local-board-won-overlay { font-size: clamp(24px, 6vw, 38px); }
+  .ultimate-board { gap: 3px; }
+
+  /* Side-by-side game select on wider phones */
+  .game-select-cards { flex-direction: row; align-items: stretch; }
+  .game-select-card  { flex: 1; }
+  .gsc-desc          { font-size: 11px; }
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════
    768px+  (tablet / desktop)
-══════════════════════════════════ */
+══════════════════════════════════════════ */
 @media (min-width: 768px) {
   .screen      { padding: 36px 28px 56px; }
-  .screen-game { padding: 28px 24px 48px; }
+  .screen-game { padding: 24px 24px 44px; }
 
+  :root { --ult-board-size: min(460px, calc(100% - 40px)); }
   .classic-board  { width: min(340px, calc(100% - 40px)); }
   .classic-cell   { font-size: clamp(28px, 5vw, 52px); }
-  .ultimate-board { width: min(460px, calc(100% - 40px)); gap: 4px; }
-  .ult-cell       { font-size: clamp(13px, 2vw, 19px); }
+  .ultimate-board { gap: 4px; }
 
-  .stats-grid       { grid-template-columns: repeat(3, 1fr); }
+  .stats-grid             { grid-template-columns: repeat(3, 1fr); }
   .game-actions .btn-action { min-width: 88px; }
+
+  /* Side-by-side game select on tablet */
+  .game-select-cards { flex-direction: row; align-items: stretch; }
+  .game-select-card  { flex: 1; }
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════
    1200px+  (desktop / wide)
-══════════════════════════════════ */
+══════════════════════════════════════════ */
 @media (min-width: 1200px) {
   body { align-items: center; }
 
@@ -119,82 +170,49 @@
     box-shadow: 0 18px 70px rgba(0,0,0,.48);
   }
 
-  .ultimate-board { width: min(500px, calc(100% - 40px)); }
+  /* On desktop, screen-card scrolls within a max-height card */
+  .screen-card {
+    height: auto;
+    min-height: auto;
+    max-height: calc(100vh - 72px);
+    border-radius: 26px;
+  }
+
+  :root { --ult-board-size: min(500px, calc(100% - 40px)); }
 }
 
-/* ══════════════════════════════════
-   Landscape phone
-══════════════════════════════════ */
+/* ══════════════════════════════════════════
+   Landscape phone  (short viewport)
+══════════════════════════════════════════ */
 @media (max-height: 500px) and (orientation: landscape) {
-  .screen         { padding: 10px 18px 24px; }
-  .logo           { font-size: 32px; margin-bottom: 2px; }
-  .subtitle       { margin-bottom: 8px; font-size: 12px; }
+  .screen      { padding: 8px 18px 20px; }
+  .logo        { font-size: 28px; margin-bottom: 2px; }
+  .subtitle    { margin-bottom: 4px; font-size: 11px; }
+  .btn-play    { padding: 10px; margin-bottom: 8px; }
+  .home-menu   { gap: 4px; }
+  .btn-menu    { padding: 8px 14px; font-size: 13px; min-height: 38px; }
+  .game-header { gap: 4px; }
+  .turn-indicator { padding: 5px 10px; font-size: 12px; }
+  .game-actions   { gap: 4px; }
+  .ai-thinking    { min-height: 20px; padding: 2px; }
+
+  :root { --ult-board-size: min(260px, calc(100vw - 48px)); }
   .classic-board  { width: min(220px, calc(100vw - 48px)); }
-  .ultimate-board { width: min(260px, calc(100vw - 48px)); gap: 2px; }
-  .local-board    { padding: 1px; gap: 1px; }
-  .home-menu      { gap: 5px; }
-  .btn-menu       { padding: 9px 14px; font-size: 14px; }
-  .btn-play       { padding: 12px; margin-bottom: 10px; }
-  .game-header    { gap: 4px; }
-  .turn-indicator { padding: 6px 12px; font-size: 13px; }
-  .game-actions   { gap: 5px; }
+  .local-board    { padding: 1px; }
+
+  /* Game select horizontal in landscape */
+  .game-select-cards  { flex-direction: row; }
+  .game-select-card   { flex: 1; padding: 10px 12px; }
+  .game-select-sub, .gsc-desc { display: none; }
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════
    Reduced motion
-══════════════════════════════════ */
+══════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-}
-
-/* ══════════════════════════════════
-   Reduced motion
-══════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
-}
-
-/* ══════════════════════════════════
-   Game Select — responsive cards
-══════════════════════════════════ */
-@media (max-width: 359px) {
-  .game-select-cards { gap: 10px; }
-  .game-select-card { padding: 14px 12px 12px; }
-  .gsc-icon { font-size: 22px; }
-  .gsc-title { font-size: 17px; }
-  .gsc-desc { font-size: 11px; }
-  .gsc-tags span { font-size: 9px; padding: 2px 6px; }
-  .gsc-arrow { font-size: 11px; }
-  .game-select-sub { display: none; }
-}
-
-@media (min-width: 360px) and (max-width: 479px) {
-  .game-select-card { padding: 17px 16px 15px; }
-  .gsc-title { font-size: 21px; }
-}
-
-/* ══════════════════════════════════
-   Stats history on small screens
-══════════════════════════════════ */
-@media (max-width: 479px) {
-  .history-item-main { flex-direction: column; gap: 2px; }
-  .stats-history { max-height: 175px; }
-}
-
-/* ══════════════════════════════════
-   Achievements on small screens
-══════════════════════════════════ */
-@media (max-width: 359px) {
-  .ach-list { max-height: calc(100dvh - 195px); }
-  .ach-item { padding: 10px 10px; }
-  .ach-icon { font-size: 22px; }
-  .ach-name { font-size: 13px; }
 }

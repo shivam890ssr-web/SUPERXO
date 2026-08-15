@@ -9,7 +9,7 @@ import { Statistics } from './statistics.js';
 import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
-import { showDialog, showToast, navigate, updateTurnGlow } from './main.js';
+import { showDialog, showToast, navigate, navigateClean, updateTurnGlow } from './main.js';
 
 export const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -346,7 +346,7 @@ function endMatch() {
 
   showDialog('Match Over', dialogMsg, [
     { label: '🔄 Rematch', action: () => restartMatch() },
-    { label: '🏠 Menu', action: () => navigate('gameSelectScreen') },
+    { label: '🏠 Menu', action: () => navigateClean('gameSelectScreen') },
     { label: '▶ Replay', action: () => openReplay() },
   ]);
 }
@@ -540,7 +540,14 @@ export function wireClassicEvents() {
   document.getElementById('classicReplayBtn').addEventListener('click', () => openReplay());
   document.getElementById('classicBackBtn').addEventListener('click', () => {
     Timer.stop();
-    navigate('gameSelectScreen');
+    if (!state.gameOver && !state.matchOver && state.moveHistory.length > 0) {
+      showDialog('Leave Game?', 'Your current game progress will be lost.', [
+        { label: 'Leave', action: () => navigateClean('gameSelectScreen') },
+        { label: 'Stay', action: null },
+      ]);
+    } else {
+      navigateClean('gameSelectScreen');
+    }
   });
 }
 

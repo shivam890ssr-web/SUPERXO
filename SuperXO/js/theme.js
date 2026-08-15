@@ -1,25 +1,16 @@
 /**
  * theme.js — CSS custom-property theming.
- * Applies named themes by setting vars on :root.
+ * Themes are unlocked by purchasing with coins.
+ * Classic and Neon are free by default.
  */
 import { Storage } from './storage.js';
-
-const REQUIRED_VARS = [
-  '--color-bg-1',
-  '--color-bg-2',
-  '--color-accent-1',
-  '--color-accent-2',
-  '--color-surface',
-  '--color-border',
-  '--color-text',
-  '--glow-color',
-];
 
 const THEMES = [
   {
     id: 'classic',
     name: 'Classic',
-    unlockGames: 0,
+    coinCost: 0,       // free
+    description: 'The original dark blue design',
     vars: {
       '--color-bg-1': '#203050',
       '--color-bg-2': '#05080f',
@@ -34,7 +25,8 @@ const THEMES = [
   {
     id: 'neon',
     name: 'Neon',
-    unlockGames: 2,
+    coinCost: 0,       // free
+    description: 'Electric magenta & cyan glow',
     vars: {
       '--color-bg-1': '#0d001a',
       '--color-bg-2': '#050010',
@@ -49,7 +41,8 @@ const THEMES = [
   {
     id: 'royal',
     name: 'Royal',
-    unlockGames: 5,
+    coinCost: 80,
+    description: 'Gold & deep purple royalty',
     vars: {
       '--color-bg-1': '#1a1030',
       '--color-bg-2': '#0a0818',
@@ -64,7 +57,8 @@ const THEMES = [
   {
     id: 'glass',
     name: 'Glass',
-    unlockGames: 10,
+    coinCost: 120,
+    description: 'Frosted white minimalism',
     vars: {
       '--color-bg-1': '#1e2a3a',
       '--color-bg-2': '#0a1020',
@@ -79,7 +73,8 @@ const THEMES = [
   {
     id: 'cyber',
     name: 'Cyber',
-    unlockGames: 15,
+    coinCost: 150,
+    description: 'Orange & teal futuristic grid',
     vars: {
       '--color-bg-1': '#1a0a00',
       '--color-bg-2': '#0a0500',
@@ -94,7 +89,8 @@ const THEMES = [
   {
     id: 'nature',
     name: 'Nature',
-    unlockGames: 20,
+    coinCost: 150,
+    description: 'Forest greens and earthy tones',
     vars: {
       '--color-bg-1': '#0a1a06',
       '--color-bg-2': '#050e03',
@@ -109,7 +105,8 @@ const THEMES = [
   {
     id: 'minimal',
     name: 'Minimal',
-    unlockGames: 25,
+    coinCost: 200,
+    description: 'Clean greyscale — no distractions',
     vars: {
       '--color-bg-1': '#1a1a1a',
       '--color-bg-2': '#0a0a0a',
@@ -124,7 +121,8 @@ const THEMES = [
   {
     id: 'midnight',
     name: 'Midnight',
-    unlockGames: 50,
+    coinCost: 250,
+    description: 'Deep indigo & violet night sky',
     vars: {
       '--color-bg-1': '#000820',
       '--color-bg-2': '#000510',
@@ -139,7 +137,8 @@ const THEMES = [
   {
     id: 'retro',
     name: 'Retro',
-    unlockGames: 75,
+    coinCost: 300,
+    description: 'Amber & yellow retro arcade',
     vars: {
       '--color-bg-1': '#1a0f00',
       '--color-bg-2': '#0a0700',
@@ -154,7 +153,8 @@ const THEMES = [
   {
     id: 'future',
     name: 'Future',
-    unlockGames: 100,
+    coinCost: 400,
+    description: 'Cyan & hot pink sci-fi vibes',
     vars: {
       '--color-bg-1': '#001a1a',
       '--color-bg-2': '#000d0d',
@@ -172,7 +172,6 @@ const THEME_MAP = Object.fromEntries(THEMES.map(t => [t.id, t]));
 
 /**
  * Apply a theme by setting CSS custom properties on :root.
- * Falls back to 'classic' if themeName is unknown.
  * @param {string} themeName
  */
 function apply(themeName) {
@@ -184,7 +183,6 @@ function apply(themeName) {
   for (const [prop, val] of Object.entries(theme.vars)) {
     root.style.setProperty(prop, val);
   }
-  // Store current theme
   Storage.set('theme', theme.id);
 }
 
@@ -199,36 +197,55 @@ function getAll() {
 }
 
 /**
- * @param {string} themeName
+ * Check if a theme is unlocked (owned).
+ * @param {string} themeId
  * @returns {boolean}
  */
-function isUnlocked(themeName) {
+function isUnlocked(themeId) {
   const unlocked = Storage.get('unlockedThemes');
-  return Array.isArray(unlocked) && unlocked.includes(themeName);
+  return Array.isArray(unlocked) && unlocked.includes(themeId);
 }
 
 /**
- * Unlock a theme and persist.
- * @param {string} themeName
+ * Mark a theme as unlocked and persist.
+ * Does NOT deduct coins — caller handles that.
+ * @param {string} themeId
  */
-function unlock(themeName) {
+function unlock(themeId) {
   const unlocked = Storage.get('unlockedThemes');
-  if (!unlocked.includes(themeName)) {
-    unlocked.push(themeName);
+  if (!unlocked.includes(themeId)) {
+    unlocked.push(themeId);
     Storage.set('unlockedThemes', unlocked);
   }
 }
 
 /**
- * Check if a theme should be auto-unlocked based on games played.
- * @param {number} gamesPlayed
+ * Purchase a theme with coins.
+ * @param {string} themeId
+ * @returns {{ success: boolean, reason?: string }}
  */
-function checkUnlocks(gamesPlayed) {
-  THEMES.forEach(t => {
-    if (t.unlockGames <= gamesPlayed && !isUnlocked(t.id)) {
-      unlock(t.id);
-    }
-  });
+function purchase(themeId) {
+  const theme = THEME_MAP[themeId];
+  if (!theme) return { success: false, reason: 'Unknown theme' };
+  if (isUnlocked(themeId)) return { success: false, reason: 'Already owned' };
+
+  const coins = Storage.get('coins');
+  if (coins < theme.coinCost) {
+    return { success: false, reason: `Need ${theme.coinCost} 🪙 — you have ${coins}` };
+  }
+
+  Storage.set('coins', coins - theme.coinCost);
+  unlock(themeId);
+  return { success: true };
 }
 
-export const Theme = { apply, getCurrent, getAll, isUnlocked, unlock, checkUnlocks, REQUIRED_VARS };
+/**
+ * Legacy: kept so existing calls to checkUnlocks don't break.
+ * Now a no-op since unlocks are purely coin-based.
+ */
+function checkUnlocks() {
+  // Themes are now coin-purchased only.
+  // Classic and Neon are free and set in storage defaults.
+}
+
+export const Theme = { apply, getCurrent, getAll, isUnlocked, unlock, purchase, checkUnlocks, THEMES, THEME_MAP };
