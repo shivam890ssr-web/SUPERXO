@@ -9,7 +9,7 @@ import { Statistics } from './statistics.js';
 import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
-import { showDialog, showToast, navigate } from './main.js';
+import { showDialog, showToast, navigate, updateTurnGlow } from './main.js';
 
 const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -86,7 +86,11 @@ function initDOM() {
     scoreX: document.getElementById('ultimateScoreX'),
     scoreO: document.getElementById('ultimateScoreO'),
     scoreDraw: document.getElementById('ultimateScoreDraw'),
+    turnIndicator: document.getElementById('ultimateTurnIndicator'),
     turnText: document.getElementById('ultimateTurnText'),
+    timerDisplay: document.getElementById('ultimateTimerDisplay'),
+    timerRing: document.getElementById('ultimateTimerRing'),
+    timerCount: document.getElementById('ultimateTimerCount'),
     aiThinking: document.getElementById('uAiThinking'),
     restartBtn: document.getElementById('ultimateRestartBtn'),
     replayBtn: document.getElementById('ultimateReplayBtn'),
@@ -110,6 +114,13 @@ function init(config) {
   buildBoard();
   renderAll();
   dom.replayBtn.disabled = true;
+
+  if (state.timerEnabled) {
+    if (dom.timerDisplay) dom.timerDisplay.style.display = '';
+    startTurnTimer();
+  } else {
+    if (dom.timerDisplay) dom.timerDisplay.style.display = 'none';
+  }
 
   if (state.vsAI && state.currentPlayer === state.aiPlayer) scheduleAIMove();
 }
@@ -155,6 +166,7 @@ function renderAll() {
       overlay.classList.toggle('visible', !!w);
       overlay.classList.toggle('player-x', w === 'X');
       overlay.classList.toggle('player-o', w === 'O');
+      overlay.classList.toggle('draw-board', w === 'draw');
     }
   }
 }
@@ -168,6 +180,7 @@ function renderScores() {
 function updateTurnIndicator() {
   const name = state.players[state.currentPlayer];
   dom.turnText.textContent = `${name}'s turn (${state.currentPlayer})`;
+  updateTurnGlow('ultimateTurnIndicator', state.currentPlayer);
 }
 
 // ── Click handling ────────────────────────────────────
@@ -295,12 +308,14 @@ function endGame(result) {
   Achievements.check(stats, showToast);
   updateCoinDisplay();
 
-  const resultName = result === 'draw' ? 'Draw!' : `${state.players[result]} wins!`;
+  const resultName = result === 'draw' ? '🤝 It\'s a Draw!' : `🏆 ${state.players[result]} wins!`;
   const coinMsg = coinsEarned > 0 ? `\n+${coinsEarned} 🪙 coins earned!` : '';
-  showDialog('Game Over', `${resultName}${coinMsg}`, [
-    { label: 'Rematch', action: () => restartGame() },
-    { label: 'Back to Menu', action: () => navigate('gameSelectScreen') },
-    { label: 'View Replay', action: () => openReplay() },
+  const durationMsg = `⏱ ${Math.floor(duration / 60)}m ${duration % 60}s  ·  ${state.moveHistory.length} moves`;
+  if (result !== 'draw') spawnConfetti();
+  showDialog('Game Over', `${resultName}${coinMsg}\n\n${durationMsg}`, [
+    { label: '🔄 Rematch', action: () => restartGame() },
+    { label: '🏠 Menu', action: () => navigate('gameSelectScreen') },
+    { label: '▶ Replay', action: () => openReplay() },
   ]);
 }
 
@@ -338,7 +353,23 @@ function scheduleAIMove() {
 function switchTurn() {
   state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
   updateTurnIndicator();
+  if (state.timerEnabled) startTurnTimer();
   if (state.vsAI && state.currentPlayer === state.aiPlayer) scheduleAIMove();
+}
+
+function startTurnTimer() {
+  Timer.start(
+    state.timerDuration,
+    (remaining) => {
+      if (dom.timerCount) dom.timerCount.textContent = remaining;
+      if (dom.timerRing) dom.timerRing.classList.toggle('urgent', remaining <= 5);
+    },
+    () => {
+      // Forfeit turn on timeout
+      Sound.play('error');
+      if (!state.gameOver) switchTurn();
+    }
+  );
 }
 
 // ── Restart / Replay ─────────────────────────────────
@@ -357,6 +388,24 @@ function restartGame() {
 function openReplay() {
   Replay.load(state.moveHistory, 'ultimate');
   navigate('replayScreen');
+}
+
+function spawnConfetti() {
+  const colors = ['#2dd4ff', '#7dff74', '#ff6b6b', '#ffd93d', '#a855f7', '#f97316'];
+  for (let i = 0; i < 48; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-particle';
+    p.style.cssText = `
+      left:${Math.random() * 100}vw;
+      top:${Math.random() * 30 + 10}vh;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      animation-delay:${Math.random() * 0.6}s;
+      animation-duration:${1.2 + Math.random() * 0.6}s;
+      transform:rotate(${Math.random() * 360}deg);
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 2400);
+  }
 }
 
 // ── Event wiring ──────────────────────────────────────

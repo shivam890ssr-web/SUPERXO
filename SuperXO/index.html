@@ -52,17 +52,32 @@
 
   <!-- ═══════════════════ GAME SELECT ═══════════════════ -->
   <div id="gameSelectScreen" class="screen screen-card" style="display:none">
-    <h2>Choose Game</h2>
-    <div class="card-menu">
-      <button class="btn-card" id="selectClassicBtn" aria-label="Classic Tic-Tac-Toe">
-        <span class="card-icon">🎮</span>
-        <span class="card-title">Classic</span>
-        <span class="card-sub">3×3 Tic-Tac-Toe</span>
+    <h2 class="game-select-title">Choose Your Game</h2>
+    <p class="game-select-sub">Pick a mode and start playing</p>
+    <div class="game-select-cards">
+      <button class="game-select-card game-select-classic" id="selectClassicBtn" aria-label="Classic Tic-Tac-Toe">
+        <div class="gsc-badge">Classic</div>
+        <div class="gsc-icon">✕○</div>
+        <div class="gsc-title">Classic</div>
+        <div class="gsc-desc">Traditional 3×3 Tic-Tac-Toe. First to get three in a row wins.</div>
+        <div class="gsc-tags">
+          <span>1–2 Players</span>
+          <span>vs AI</span>
+          <span>Quick</span>
+        </div>
+        <div class="gsc-arrow">▶ Play Classic</div>
       </button>
-      <button class="btn-card" id="selectUltimateBtn" aria-label="Ultimate Tic-Tac-Toe">
-        <span class="card-icon">👑</span>
-        <span class="card-title">Ultimate</span>
-        <span class="card-sub">9-Board Strategy</span>
+      <button class="game-select-card game-select-ultimate" id="selectUltimateBtn" aria-label="Ultimate Tic-Tac-Toe">
+        <div class="gsc-badge gsc-badge-ultimate">Ultimate</div>
+        <div class="gsc-icon gsc-icon-ultimate">⊞</div>
+        <div class="gsc-title">Ultimate</div>
+        <div class="gsc-desc">9 boards within a board. Strategy, depth and mind games at every turn.</div>
+        <div class="gsc-tags">
+          <span>1–2 Players</span>
+          <span>Strategy</span>
+          <span>Advanced</span>
+        </div>
+        <div class="gsc-arrow gsc-arrow-ultimate">▶ Play Ultimate</div>
       </button>
     </div>
     <button class="btn-back" data-back aria-label="Back">← Back</button>
@@ -116,6 +131,8 @@
       <div class="setup-row" id="timerDurationRow" style="display:none">
         <label for="timerDuration">Turn Time</label>
         <select id="timerDuration" aria-label="Timer duration">
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
           <option value="15">15 seconds</option>
           <option value="30" selected>30 seconds</option>
           <option value="60">60 seconds</option>
@@ -211,6 +228,23 @@
           <option value="impossible">Impossible</option>
         </select>
       </div>
+      <div class="setup-row">
+        <label>Timer</label>
+        <div class="toggle-group" role="group" aria-label="Timer">
+          <button class="toggle-btn active" data-utimer="off" id="uTimerOff">⏱ Off</button>
+          <button class="toggle-btn" data-utimer="on" id="uTimerOn">⏱ On</button>
+        </div>
+      </div>
+      <div class="setup-row" id="uTimerDurationRow" style="display:none">
+        <label for="uTimerDuration">Turn Time</label>
+        <select id="uTimerDuration" aria-label="Timer duration">
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="15">15 seconds</option>
+          <option value="30" selected>30 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+      </div>
     </div>
     <button class="btn-primary" id="startUltimateBtn" aria-label="Start Ultimate game">▶ Start Game</button>
     <button class="btn-back" data-back aria-label="Back">← Back</button>
@@ -236,6 +270,11 @@
     </div>
     <div class="turn-indicator" id="ultimateTurnIndicator" aria-live="polite">
       <span id="ultimateTurnText">Player 1's turn</span>
+      <div class="timer-display" id="ultimateTimerDisplay" style="display:none">
+        <div class="timer-ring" id="ultimateTimerRing">
+          <span id="ultimateTimerCount">30</span>
+        </div>
+      </div>
     </div>
     <div class="ai-thinking" id="uAiThinking" style="display:none" aria-live="polite">
       <span class="thinking-dots">AI Thinking<span>.</span><span>.</span><span>.</span></span>
@@ -273,10 +312,12 @@
       <div class="stat-item"><span class="stat-label">Best Streak</span><span class="stat-val gold" id="statBestStreak">0</span></div>
       <div class="stat-item"><span class="stat-label">AI Wins</span><span class="stat-val" id="statAiWins">0</span></div>
       <div class="stat-item"><span class="stat-label">AI Losses</span><span class="stat-val" id="statAiLosses">0</span></div>
+      <div class="stat-item"><span class="stat-label">Win Rate</span><span class="stat-val green" id="statWinRate">—</span></div>
+      <div class="stat-item"><span class="stat-label">Avg Game Time</span><span class="stat-val" id="statAvgTime">—</span></div>
       <div class="stat-item wide"><span class="stat-label">Favorite Mode</span><span class="stat-val" id="statFavMode">—</span></div>
-      <div class="stat-item wide"><span class="stat-label">Avg Game Time</span><span class="stat-val" id="statAvgTime">—</span></div>
     </div>
     <canvas id="statsGraph" class="stats-graph" aria-label="Win/loss/draw chart"></canvas>
+    <p class="stats-history-label">Recent Games</p>
     <div class="stats-history" id="statsHistory"></div>
     <button class="btn-danger" id="resetStatsBtn" aria-label="Reset statistics">🗑 Reset Statistics</button>
     <button class="btn-back" data-back aria-label="Back">← Back</button>
@@ -285,9 +326,12 @@
   <!-- ═══════════════════ ACHIEVEMENTS ═══════════════════ -->
   <div id="achievementsScreen" class="screen screen-card" style="display:none">
     <h2>🏆 Achievements</h2>
-    <div class="ach-coin-bar">
-      <span class="coin-icon">🪙</span>
-      <span id="achCoinBalance">0</span>
+    <div class="ach-header-bar">
+      <div class="ach-coin-bar">
+        <span class="coin-icon">🪙</span>
+        <span id="achCoinBalance">0</span>
+      </div>
+      <span class="ach-unlock-count" id="achUnlockCount">0 / 9 Unlocked</span>
     </div>
     <div class="ach-list" id="achList" aria-label="Achievements list"></div>
     <button class="btn-back" data-back aria-label="Back">← Back</button>
@@ -349,6 +393,58 @@
             <option value="high">High</option>
           </select>
         </div>
+        <div class="settings-section-title" style="padding-top:4px">Classic Grid Lines</div>
+        <div class="setting-row">
+          <span class="setting-label">Grid Lines</span>
+          <button class="toggle-switch on" id="classicGridToggle" role="switch" aria-checked="true" aria-label="Classic grid lines">
+            <span class="toggle-thumb"></span>
+          </button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Thickness</span>
+          <select id="classicGridWidth" aria-label="Classic grid line thickness">
+            <option value="1">Thin</option>
+            <option value="2" selected>Medium</option>
+            <option value="4">Thick</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Opacity</span>
+          <select id="classicGridOpacity" aria-label="Classic grid line opacity">
+            <option value="0.08">Low</option>
+            <option value="0.18" selected>Medium</option>
+            <option value="0.35">High</option>
+          </select>
+        </div>
+        <div class="settings-section-title" style="padding-top:4px">Ultimate Grid Lines</div>
+        <div class="setting-row">
+          <span class="setting-label">Outer Lines</span>
+          <button class="toggle-switch on" id="outerGridToggle" role="switch" aria-checked="true" aria-label="Outer grid lines">
+            <span class="toggle-thumb"></span>
+          </button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Inner Lines</span>
+          <button class="toggle-switch on" id="innerGridToggle" role="switch" aria-checked="true" aria-label="Inner grid lines">
+            <span class="toggle-thumb"></span>
+          </button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Outer Thickness</span>
+          <select id="outerGridWidth" aria-label="Outer grid thickness">
+            <option value="2">Thin</option>
+            <option value="3" selected>Medium</option>
+            <option value="5">Thick</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Inner Thickness</span>
+          <select id="innerGridWidth" aria-label="Inner grid thickness">
+            <option value="1" selected>Thin</option>
+            <option value="2">Medium</option>
+            <option value="3">Thick</option>
+          </select>
+        </div>
       </div>
     </div>
     <button class="btn-danger" id="resetProgressBtn" aria-label="Reset all progress">🗑 Reset Progress</button>
@@ -378,13 +474,16 @@
       <span class="tut-step-indicator" id="tutStepIndicator">Step 1 / 5</span>
       <button class="btn-action" id="tutPracticeBtn" aria-label="Enter practice mode">🎯 Practice</button>
     </div>
+    <div class="tut-progress-bar-wrap" id="tutProgressWrap">
+      <div class="tut-progress-fill" id="tutProgressFill"></div>
+    </div>
     <div class="tut-instruction-box" id="tutInstruction" aria-live="polite">Welcome!</div>
     <div class="tut-board-wrap" id="tutBoardWrap"></div>
     <div class="tut-controls">
       <button class="btn-action" id="tutPrevBtn" aria-label="Previous step">← Prev</button>
       <button class="btn-action" id="tutNextBtn" aria-label="Next step">Next →</button>
     </div>
-    <button class="btn-back" id="tutExitBtn" aria-label="Exit tutorial">✕ Exit</button>
+    <button class="btn-back" id="tutExitBtn" aria-label="Exit tutorial">✕ Exit Tutorial</button>
   </div>
 
   <!-- ═══════════════════ ABOUT ═══════════════════ -->

@@ -72,6 +72,8 @@ function onScreenEnter(screenId) {
   switch (screenId) {
     case 'homeScreen':
       refreshHomeCoins();
+      // Auto-unlock any themes earned so far
+      Theme.checkUnlocks(Statistics.get().played);
       break;
     case 'statisticsScreen':
       renderStatisticsScreen();
@@ -93,6 +95,7 @@ function initApp() {
   // Apply theme and settings first
   Theme.apply(Theme.getCurrent());
   Settings.applyAll();
+  applyBoardCustom();
 
   // Set version strings
   document.querySelectorAll('.splash-version, #settingsVersion, #aboutVersion').forEach(el => {
@@ -138,15 +141,16 @@ function showSplash() {
   const continueText = document.getElementById('splashContinueText');
 
   let value = 0;
+  // ~5 seconds (100 steps × 50ms)
   const interval = setInterval(() => {
-    value = Math.min(value + 1, 100);
+    value = Math.min(value + 2, 100);
     progress.style.width = value + '%';
     if (value >= 100) {
       clearInterval(interval);
       loadingText.style.display = 'none';
       continueText.style.display = 'block';
     }
-  }, 150);
+  }, 100);
 
   const proceed = () => {
     if (value >= 100) {
@@ -249,14 +253,28 @@ function wireSetupEvents() {
   // Start Ultimate game
   document.getElementById('startUltimateBtn').addEventListener('click', () => {
     const mode = document.querySelector('[data-umode].active')?.dataset.umode || 'hvh';
+    const timerOn = document.querySelector('[data-utimer].active')?.dataset.utimer === 'on';
     const config = {
       p1: document.getElementById('up1Name').value.trim() || 'Player 1',
       p2: mode === 'hvh' ? (document.getElementById('up2Name').value.trim() || 'Player 2') : 'AI',
       mode,
       difficulty: document.getElementById('uAiDifficulty').value,
+      timerEnabled: timerOn,
+      timerDuration: Number(document.getElementById('uTimerDuration')?.value || 30),
     };
     Ultimate.init(config);
     navigate('ultimateGameScreen');
+  });
+
+  // Timer toggle — Ultimate
+  document.querySelectorAll('[data-utimer]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-utimer]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const uTimerRow = document.getElementById('uTimerDurationRow');
+      if (uTimerRow) uTimerRow.style.display = btn.dataset.utimer === 'on' ? '' : 'none';
+      Sound.play('click');
+    });
   });
 }
 
@@ -294,12 +312,12 @@ function wireSettingsEvents() {
   const radiusInput = document.getElementById('cornerRadius');
   if (radiusInput) {
     const bc = Storage.get('boardCustom');
-    radiusInput.value = bc.cornerRadius;
+    radiusInput.value = bc.cornerRadius ?? 16;
     radiusInput.addEventListener('input', () => {
       const bc = Storage.get('boardCustom');
       bc.cornerRadius = Number(radiusInput.value);
       Storage.set('boardCustom', bc);
-      document.documentElement.style.setProperty('--cell-radius', radiusInput.value + 'px');
+      applyBoardCustom();
     });
   }
 
@@ -315,6 +333,70 @@ function wireSettingsEvents() {
       applyBoardCustom();
     });
   }
+
+  // Grid line toggles (wired dynamically in renderSettingsScreen)
+
+  // Classic grid toggle
+  document.getElementById('classicGridToggle')?.addEventListener('click', function() {
+    const bc = Storage.get('boardCustom');
+    bc.classicGridLines = !bc.classicGridLines;
+    Storage.set('boardCustom', bc);
+    this.classList.toggle('on', bc.classicGridLines);
+    this.setAttribute('aria-checked', String(bc.classicGridLines));
+    applyBoardCustom();
+  });
+
+  // Outer grid toggle
+  document.getElementById('outerGridToggle')?.addEventListener('click', function() {
+    const bc = Storage.get('boardCustom');
+    bc.outerGridLines = !bc.outerGridLines;
+    Storage.set('boardCustom', bc);
+    this.classList.toggle('on', bc.outerGridLines);
+    this.setAttribute('aria-checked', String(bc.outerGridLines));
+    applyBoardCustom();
+  });
+
+  // Inner grid toggle
+  document.getElementById('innerGridToggle')?.addEventListener('click', function() {
+    const bc = Storage.get('boardCustom');
+    bc.innerGridLines = !bc.innerGridLines;
+    Storage.set('boardCustom', bc);
+    this.classList.toggle('on', bc.innerGridLines);
+    this.setAttribute('aria-checked', String(bc.innerGridLines));
+    applyBoardCustom();
+  });
+
+  // Classic grid width
+  document.getElementById('classicGridWidth')?.addEventListener('change', function() {
+    const bc = Storage.get('boardCustom');
+    bc.classicGridWidth = Number(this.value);
+    Storage.set('boardCustom', bc);
+    applyBoardCustom();
+  });
+
+  // Classic grid opacity
+  document.getElementById('classicGridOpacity')?.addEventListener('change', function() {
+    const bc = Storage.get('boardCustom');
+    bc.classicGridOpacity = Number(this.value);
+    Storage.set('boardCustom', bc);
+    applyBoardCustom();
+  });
+
+  // Outer grid width
+  document.getElementById('outerGridWidth')?.addEventListener('change', function() {
+    const bc = Storage.get('boardCustom');
+    bc.outerGridWidth = Number(this.value);
+    Storage.set('boardCustom', bc);
+    applyBoardCustom();
+  });
+
+  // Inner grid width
+  document.getElementById('innerGridWidth')?.addEventListener('change', function() {
+    const bc = Storage.get('boardCustom');
+    bc.innerGridWidth = Number(this.value);
+    Storage.set('boardCustom', bc);
+    applyBoardCustom();
+  });
 
   // Reset progress
   document.getElementById('resetProgressBtn')?.addEventListener('click', () => {
@@ -349,6 +431,10 @@ function wireSettingsEvents() {
 }
 
 function renderSettingsScreen() {
+  // Auto-unlock themes based on games played
+  const stats = Statistics.get();
+  Theme.checkUnlocks(stats.played);
+
   // Theme grid
   const grid = document.getElementById('themeGrid');
   if (grid) {
@@ -432,13 +518,54 @@ function renderSettingsScreen() {
   });
 
   applyBoardCustom();
+
+  // Sync grid-line toggle states
+  const bc2 = Storage.get('boardCustom');
+  const syncToggle = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('on', val !== false);
+    el.setAttribute('aria-checked', String(val !== false));
+  };
+  syncToggle('classicGridToggle', bc2.classicGridLines !== false);
+  syncToggle('outerGridToggle', bc2.outerGridLines !== false);
+  syncToggle('innerGridToggle', bc2.innerGridLines !== false);
+  // Sync selects
+  const syncSel = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val); };
+  syncSel('classicGridWidth', bc2.classicGridWidth ?? 2);
+  syncSel('classicGridOpacity', bc2.classicGridOpacity ?? 0.18);
+  syncSel('outerGridWidth', bc2.outerGridWidth ?? 3);
+  syncSel('innerGridWidth', bc2.innerGridWidth ?? 1);
+
+  // Coin balance
+  const coins = Storage.get('coins');
+  const achBal = document.getElementById('achCoinBalance');
+  if (achBal) achBal.textContent = coins;
 }
 
 function applyBoardCustom() {
   const bc = Storage.get('boardCustom');
-  document.documentElement.style.setProperty('--cell-radius', bc.cornerRadius + 'px');
-  const glowMap = { none: '0px', low: '4px', medium: '12px', high: '24px' };
-  document.documentElement.style.setProperty('--cell-glow', glowMap[bc.glowIntensity] || '12px');
+  const r = document.documentElement;
+
+  r.style.setProperty('--cell-radius', (bc.cornerRadius ?? 16) + 'px');
+
+  const glowMap = { none:'0px', low:'4px', medium:'10px', high:'22px' };
+  r.style.setProperty('--cell-glow', glowMap[bc.glowIntensity] || '10px');
+
+  // Classic grid lines
+  r.style.setProperty('--grid-lines-visible', bc.classicGridLines !== false ? '1' : '0');
+  r.style.setProperty('--grid-line-width', (bc.classicGridWidth ?? 2) + 'px');
+  r.style.setProperty('--grid-line-opacity', String(bc.classicGridOpacity ?? 0.22));
+
+  // Ultimate outer grid
+  r.style.setProperty('--outer-grid-visible', bc.outerGridLines !== false ? '1' : '0');
+  r.style.setProperty('--outer-grid-width', (bc.outerGridWidth ?? 4) + 'px');
+  r.style.setProperty('--outer-grid-opacity', String(bc.outerGridOpacity ?? 0.35));
+
+  // Ultimate inner grid
+  r.style.setProperty('--inner-grid-visible', bc.innerGridLines !== false ? '1' : '0');
+  r.style.setProperty('--inner-grid-width', (bc.innerGridWidth ?? 1) + 'px');
+  r.style.setProperty('--inner-grid-opacity', String(bc.innerGridOpacity ?? 0.15));
 }
 
 // ── Statistics screen ─────────────────────────────────
@@ -453,30 +580,85 @@ function renderStatisticsScreen() {
   set('statBestStreak', stats.bestStreak);
   set('statAiWins', stats.aiWins);
   set('statAiLosses', stats.aiLosses);
-  set('statFavMode', stats.favoriteMode || '—');
+  set('statFavMode', formatFavMode(stats.favoriteMode));
+
+  // Win rate
+  const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+  set('statWinRate', stats.played > 0 ? `${winRate}%` : '—');
+
+  // Fix: average game time
   const avg = stats.played > 0 ? Math.round(stats.totalDuration / stats.played) : 0;
-  set('statAvgTime', stats.played > 0 ? `${avg}s` : '—');
+  set('statAvgTime', stats.played > 0 ? formatDuration(avg) : '—');
 
   // Graph
   const canvas = document.getElementById('statsGraph');
-  if (canvas) Statistics.renderGraph(canvas);
+  if (canvas) {
+    requestAnimationFrame(() => Statistics.renderGraph(canvas));
+  }
 
-  // Match history
+  // Match history — improved cards
   const histEl = document.getElementById('statsHistory');
   if (histEl) {
     histEl.innerHTML = '';
     if (stats.history.length === 0) {
       histEl.innerHTML = '<p class="empty-state">No games played yet.</p>';
     } else {
-      stats.history.slice(0, 10).forEach(game => {
+      stats.history.slice(0, 30).forEach(game => {
         const item = document.createElement('div');
         item.className = 'history-item';
-        const date = new Date(game.date).toLocaleDateString();
-        item.textContent = `${game.mode === 'ultimate' ? '👑' : '🎮'} ${game.players?.X || 'X'} vs ${game.players?.O || 'O'} — ${game.winner === 'draw' ? 'Draw' : game.winner + ' won'} (${game.moveCount} moves) ${date}`;
+
+        const date = new Date(game.date).toLocaleDateString(undefined, { month:'short', day:'numeric' });
+        const time = new Date(game.date).toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+
+        let resultIcon, resultClass;
+        if (game.winner === 'draw') {
+          resultIcon = '🤝'; resultClass = 'hist-draw';
+        } else if (game.humanPlayer && game.winner === game.humanPlayer) {
+          resultIcon = '✅'; resultClass = 'hist-win';
+        } else if (game.humanPlayer) {
+          resultIcon = '❌'; resultClass = 'hist-loss';
+        } else {
+          resultIcon = game.winner === 'X' ? '🔵' : '🟢'; resultClass = '';
+        }
+
+        const modeIcon = game.mode === 'ultimate' ? '👑' : '🎮';
+        const vsStr = game.vsAI ? `vs AI (${game.difficulty || 'med'})` : 'vs Human';
+        const durStr = game.duration ? formatDuration(game.duration) : '';
+        const resultText = game.winner === 'draw' ? 'Draw'
+          : (game.humanPlayer
+              ? (game.winner === game.humanPlayer ? 'Won' : 'Lost')
+              : `${game.winner} won`);
+
+        item.innerHTML = `
+          <div class="history-item-main">
+            <span class="hist-result ${resultClass}">${resultIcon} ${resultText}</span>
+            <span class="hist-mode">${modeIcon} ${game.mode === 'ultimate' ? 'Ultimate' : 'Classic'} ${vsStr}</span>
+          </div>
+          <div class="history-item-meta">
+            <span>${date} ${time}</span>
+            ${durStr ? `<span>⏱ ${durStr}</span>` : ''}
+          </div>
+        `;
         histEl.appendChild(item);
       });
     }
   }
+}
+
+function formatFavMode(key) {
+  if (!key) return '—';
+  const map = {
+    'classic_hvh': 'Classic HvH',
+    'classic_ai': 'Classic vs AI',
+    'ultimate_hvh': 'Ultimate HvH',
+    'ultimate_ai': 'Ultimate vs AI',
+  };
+  return map[key] || key;
+}
+
+function formatDuration(sec) {
+  if (sec < 60) return `${sec}s`;
+  return `${Math.floor(sec/60)}m ${sec%60}s`;
 }
 
 // ── Achievements screen ───────────────────────────────
@@ -490,18 +672,27 @@ function renderAchievementsScreen() {
   const achBal = document.getElementById('achCoinBalance');
   if (achBal) achBal.textContent = coins;
 
+  // Show unlock count
+  const unlockCount = achs.filter(a => a.unlocked).length;
+  const countEl = document.getElementById('achUnlockCount');
+  if (countEl) countEl.textContent = `${unlockCount} / ${achs.length} Unlocked`;
+
   achs.forEach(ach => {
+    const pct = Math.round(ach.progressValue * 100);
     const item = document.createElement('div');
     item.className = 'ach-item' + (ach.unlocked ? ' unlocked' : '');
     item.innerHTML = `
       <div class="ach-icon">${ach.icon}</div>
       <div class="ach-body">
-        <div class="ach-name">${ach.name}</div>
-        <div class="ach-desc">${ach.description}</div>
-        <div class="ach-progress-wrap">
-          <div class="ach-progress-bar" style="width:${Math.round(ach.progressValue * 100)}%"></div>
+        <div class="ach-name-row">
+          <span class="ach-name">${ach.name}</span>
+          ${ach.unlocked ? '<span class="ach-unlocked-badge">✓</span>' : ''}
         </div>
-        <div class="ach-reward">${ach.unlocked ? '✅ Unlocked' : `${ach.coinReward} 🪙`}</div>
+        <div class="ach-desc">${ach.description}</div>
+        <div class="ach-progress-wrap" title="${pct}% complete">
+          <div class="ach-progress-bar" style="width:${pct}%"></div>
+        </div>
+        <div class="ach-reward">${ach.unlocked ? '✅ Unlocked' : `🪙 ${ach.coinReward} coins`}</div>
       </div>
     `;
     listEl.appendChild(item);
@@ -631,3 +822,30 @@ export function showToast(title, message) {
 
 // ── Boot ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', initApp);
+
+/**
+ * Update the turn indicator glow to reflect the current player.
+ * Also updates score item active/inactive highlight.
+ * @param {string} elementId - the turn indicator element id
+ * @param {'X'|'O'} player
+ */
+export function updateTurnGlow(elementId, player) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.classList.remove('player-x-active', 'player-o-active');
+  el.classList.add(player === 'X' ? 'player-x-active' : 'player-o-active');
+
+  // Highlight active player's score column
+  // Determine parent game screen
+  const screenPrefix = elementId.startsWith('classic') ? 'classic' : 'ultimate';
+  const scoresEl = document.getElementById(screenPrefix + 'Scores');
+  if (scoresEl) {
+    const items = scoresEl.querySelectorAll('.score-item:not(.score-draw)');
+    items.forEach((item, idx) => {
+      // idx 0 = X player, idx 1 = O player
+      const isActive = (idx === 0 && player === 'X') || (idx === 1 && player === 'O');
+      item.classList.toggle('active-player', isActive);
+      item.classList.toggle('inactive-player', !isActive);
+    });
+  }
+}

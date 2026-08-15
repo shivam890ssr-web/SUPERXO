@@ -9,7 +9,7 @@ import { Statistics } from './statistics.js';
 import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
-import { showDialog, showToast, navigate } from './main.js';
+import { showDialog, showToast, navigate, updateTurnGlow } from './main.js';
 
 export const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -147,6 +147,7 @@ function updateTurnIndicator() {
   const name = state.players[state.currentPlayer];
   dom.turnText.textContent = `${name}'s turn (${state.currentPlayer})`;
   dom.board.dataset.currentPlayer = state.currentPlayer;
+  updateTurnGlow('classicTurnIndicator', state.currentPlayer);
 }
 
 function updateActionButtons() {
@@ -328,17 +329,25 @@ function endMatch() {
   Storage.set('statistics', stats);
 
   // Check achievements
-  const newAch = Achievements.check(stats, showToast);
+  Achievements.check(stats, showToast);
 
   // Update coin display
   updateCoinDisplay();
 
   const coinMsg = coinsEarned > 0 ? `\n+${coinsEarned} 🪙 coins earned!` : '';
 
-  showDialog('Match Over', `${resultText}${coinMsg}\n\nX: ${xWins}  Draws: ${state.scores.draw}  O: ${oWins}`, [
-    { label: 'Rematch', action: () => restartMatch() },
-    { label: 'Back to Menu', action: () => navigate('gameSelectScreen') },
-    { label: 'View Replay', action: () => openReplay() },
+  // Confetti on win
+  if (matchWinner !== 'draw') spawnConfetti();
+
+  // Build a rich result message
+  const scoreMsg = `${state.players.X}: ${xWins}  ·  Draws: ${state.scores.draw}  ·  ${state.players.O}: ${oWins}`;
+  const durationMsg = `⏱ ${Math.floor(duration / 60)}m ${duration % 60}s`;
+  const dialogMsg = `${resultText}${coinMsg}\n\n${scoreMsg}\n${durationMsg}`;
+
+  showDialog('Match Over', dialogMsg, [
+    { label: '🔄 Rematch', action: () => restartMatch() },
+    { label: '🏠 Menu', action: () => navigate('gameSelectScreen') },
+    { label: '▶ Replay', action: () => openReplay() },
   ]);
 }
 
@@ -483,6 +492,25 @@ function restart() {
 function openReplay() {
   Replay.load(state.moveHistory, 'classic');
   navigate('replayScreen');
+}
+
+// ── Confetti ──────────────────────────────────────────
+function spawnConfetti() {
+  const colors = ['#2dd4ff', '#7dff74', '#ff6b6b', '#ffd93d', '#a855f7', '#f97316'];
+  for (let i = 0; i < 48; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-particle';
+    p.style.cssText = `
+      left:${Math.random() * 100}vw;
+      top:${Math.random() * 30 + 10}vh;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      animation-delay:${Math.random() * 0.6}s;
+      animation-duration:${1.2 + Math.random() * 0.6}s;
+      transform:rotate(${Math.random() * 360}deg);
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 2400);
+  }
 }
 
 // ── Event wiring (called once) ────────────────────────

@@ -19,9 +19,20 @@ const DEFAULTS = {
   boardCustom: {
     gridStyle: 'solid',
     borderStyle: 'rounded',
-    cornerRadius: 18,
+    cornerRadius: 16,
     glowIntensity: 'medium',
     winLineStyle: 'glow',
+    // Classic grid lines
+    classicGridLines: true,
+    classicGridWidth: 2,
+    classicGridOpacity: 0.18,
+    // Ultimate grid lines
+    outerGridLines: true,
+    outerGridWidth: 3,
+    outerGridOpacity: 0.28,
+    innerGridLines: true,
+    innerGridWidth: 1,
+    innerGridOpacity: 0.12,
   },
   pieceColors: { x: '#2dd4ff', o: '#7dff74' },
   unlockedThemes: ['classic'],

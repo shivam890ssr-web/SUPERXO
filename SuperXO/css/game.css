@@ -1,20 +1,53 @@
-/* game.css — Classic and Ultimate game screens */
+/* ═══════════════════════════════════════════════════
+   game.css — Classic + Ultimate boards + game screens
+   Grid lines use CSS custom properties so they can
+   be toggled and adjusted from Settings without any
+   JS DOM manipulation.
+═══════════════════════════════════════════════════ */
 
-/* ── Screen layout ── */
+/* ── Defaults for grid-line CSS vars ── */
+/* These are also set from applyBoardCustom() in main.js */
+:root {
+  --grid-line-width: 2px;
+  --grid-line-opacity: 0.22;
+  --grid-lines-visible: 1;
+  --outer-grid-width: 4px;
+  --outer-grid-opacity: 0.35;
+  --outer-grid-visible: 1;
+  --inner-grid-width: 1px;
+  --inner-grid-opacity: 0.15;
+  --inner-grid-visible: 1;
+  /* derived colour so grid lines match the active theme accent */
+  --grid-line-color-classic: rgba(45,212,255, var(--grid-line-opacity));
+  --cell-bg: #070c1a; /* dark cell background, independent of body bg */
+  --ult-cell-bg: #06090f;
+}
+
+/* ══════════════════════════════════════
+   GAME SCREEN LAYOUT
+══════════════════════════════════════ */
 .screen-game {
-  padding: 16px;
-  gap: 12px;
+  padding: 10px 10px 44px;
+  gap: 10px;
   max-width: 520px;
   margin: 0 auto;
   width: 100%;
+  /* Use flex so board fills available space nicely */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* ── Header ── */
+.screen-ultimate {
+  max-width: 580px;
+}
+
+/* ── Game header ── */
 .game-header {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
 }
 
@@ -24,8 +57,8 @@
   width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 12px 8px;
+  border-radius: 14px;
+  padding: 10px 6px;
 }
 
 .score-item {
@@ -37,234 +70,367 @@
 }
 
 .score-name {
-  font-size: 12px;
-  opacity: 0.65;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  max-width: 80px;
+  font-size: 11px;
+  opacity: .62;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
 }
 
 .score-val {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--color-accent-1);
 }
 
-.score-draw .score-val { color: var(--color-text); opacity: 0.6; }
+.score-draw .score-val {
+  color: var(--color-text);
+  opacity: .58;
+}
 
 .game-round {
-  font-size: 13px;
-  opacity: 0.6;
+  font-size: 12px;
+  opacity: .58;
 }
 
 /* ── Turn indicator ── */
 .turn-indicator {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 16px;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
   font-weight: 600;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 10px 18px;
+  border-radius: 13px;
+  padding: 9px 16px;
   width: 100%;
-  justify-content: space-between;
+  transition: border-color 0.35s cubic-bezier(.4,0,.2,1),
+              box-shadow 0.35s cubic-bezier(.4,0,.2,1),
+              background 0.35s cubic-bezier(.4,0,.2,1);
 }
+
+/* Active player glow on turn indicator */
+.turn-indicator.player-x-active {
+  border-color: color-mix(in srgb, var(--color-accent-1) 60%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent-1) 22%, transparent),
+              inset 0 0 10px color-mix(in srgb, var(--color-accent-1) 6%, transparent);
+  background: color-mix(in srgb, var(--color-accent-1) 7%, var(--color-surface));
+}
+.turn-indicator.player-o-active {
+  border-color: color-mix(in srgb, var(--color-accent-2) 60%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent-2) 22%, transparent),
+              inset 0 0 10px color-mix(in srgb, var(--color-accent-2) 6%, transparent);
+  background: color-mix(in srgb, var(--color-accent-2) 7%, var(--color-surface));
+}
+
+/* Animate text when turn changes */
+#classicTurnText, #ultimateTurnText {
+  transition: opacity 0.18s;
+}
+
+/* Score items — highlight active player */
+.score-item.active-player .score-val {
+  text-shadow: 0 0 12px currentColor;
+  transform: scale(1.08);
+  transition: transform 0.25s;
+}
+.score-item { transition: opacity 0.25s; }
+.score-item.inactive-player { opacity: .52; }
 
 /* ── Timer ── */
 .timer-display { display: flex; align-items: center; }
 
 .timer-ring {
-  width: 44px; height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 3px solid var(--color-accent-1);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  transition: border-color 0.3s, color 0.3s;
+  transition: border-color .3s, color .3s;
 }
 
 .timer-ring.urgent {
-  border-color: #ff4444;
-  color: #ff4444;
-  animation: timer-pulse 0.5s ease-in-out infinite;
+  border-color: #ff4040;
+  color: #ff4040;
+  animation: timer-pulse .5s ease-in-out infinite;
 }
 
 @keyframes timer-pulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(255,68,68,0); }
-  50% { box-shadow: 0 0 12px rgba(255,68,68,0.6); }
+  0%, 100% { box-shadow: 0 0 0 rgba(255,64,64,0); }
+  50%       { box-shadow: 0 0 14px rgba(255,64,64,.65); }
 }
 
 /* ── AI thinking ── */
 .ai-thinking {
-  font-size: 15px;
-  opacity: 0.75;
+  font-size: 14px;
+  opacity: .72;
   font-style: italic;
   text-align: center;
-  padding: 8px;
+  padding: 7px;
+  min-height: 36px;
 }
 
-.thinking-dots span {
-  animation: blink-dot 1.2s infinite;
-}
-.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+.thinking-dots span { animation: blink-dot 1.2s infinite; }
+.thinking-dots span:nth-child(2) { animation-delay: .2s; }
+.thinking-dots span:nth-child(3) { animation-delay: .4s; }
 
 @keyframes blink-dot {
   0%, 100% { opacity: 0; }
-  50% { opacity: 1; }
+  50%       { opacity: 1; }
 }
 
-/* ── Classic Board ── */
+/* ── Game actions ── */
+.game-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ══════════════════════════════════════
+   CLASSIC BOARD
+   
+   Grid lines are rendered as the GAP
+   between cells.  The board background
+   colour IS the grid line colour.
+   Cells sit on --cell-bg.
+══════════════════════════════════════ */
+
 .classic-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
   position: relative;
+
+  /* Responsive sizing: never wider than viewport minus padding */
+  width: min(340px, calc(100vw - 28px));
+
+  /* Grid lines via gap + board background */
+  gap: calc(var(--grid-line-width) * var(--grid-lines-visible));
+  background: color-mix(
+    in srgb,
+    var(--color-accent-1) calc(var(--grid-line-opacity) * 100%),
+    var(--cell-bg)
+  );
+
+  border-radius: calc(var(--cell-radius, 16px) + 4px);
+  overflow: hidden;
+
+  /* Outer border matches grid-line colour */
+  border: calc(var(--grid-line-width) * var(--grid-lines-visible)) solid
+    color-mix(in srgb, var(--color-accent-1) calc(var(--grid-line-opacity) * 100%), var(--cell-bg));
+
+  margin: 4px auto;
+}
+
+/* When grid lines OFF, use a subtle border only */
+.classic-board[style*="--grid-lines-visible: 0"],
+.no-grid .classic-board {
+  gap: 0;
+  border-color: var(--color-border);
 }
 
 .classic-cell {
   aspect-ratio: 1;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--cell-radius, 18px);
+  background: var(--cell-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(28px, 8vw, 52px);
+  font-size: clamp(28px, 10vw, 54px);
   font-weight: 800;
   cursor: pointer;
-  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  transition: background var(--transition);
   user-select: none;
   position: relative;
+  /* No individual border-radius — outer board handles corners */
+  border-radius: 0;
 }
+
+/* Corner cells inherit parent border-radius */
+.classic-cell:nth-child(1) { border-radius: var(--cell-radius, 16px) 0 0 0; }
+.classic-cell:nth-child(3) { border-radius: 0 var(--cell-radius, 16px) 0 0; }
+.classic-cell:nth-child(7) { border-radius: 0 0 0 var(--cell-radius, 16px); }
+.classic-cell:nth-child(9) { border-radius: 0 0 var(--cell-radius, 16px) 0; }
 
 .classic-cell:hover:not(.player-x):not(.player-o),
 .classic-cell:focus-visible:not(.player-x):not(.player-o) {
-  background: color-mix(in srgb, var(--color-accent-1) 15%, transparent);
-  transform: scale(1.04);
-  outline: 2px solid var(--color-accent-1);
-  outline-offset: 2px;
+  background: color-mix(in srgb, var(--color-accent-1) 14%, var(--cell-bg));
+  outline: none;
 }
 
 .classic-cell.player-x {
   color: var(--x-color, var(--color-accent-1));
-  text-shadow: 0 0 var(--cell-glow, 12px) var(--x-color, var(--color-accent-1));
+  text-shadow: 0 0 var(--cell-glow, 10px) var(--x-color, var(--color-accent-1));
 }
 
 .classic-cell.player-o {
   color: var(--o-color, var(--color-accent-2));
-  text-shadow: 0 0 var(--cell-glow, 12px) var(--o-color, var(--color-accent-2));
+  text-shadow: 0 0 var(--cell-glow, 10px) var(--o-color, var(--color-accent-2));
 }
 
 .classic-cell.winner {
-  background: color-mix(in srgb, var(--color-accent-1) 18%, transparent);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-1) 40%, transparent);
-  animation: winner-pulse 0.6s ease-out;
+  background: color-mix(in srgb, var(--color-accent-1) 20%, var(--cell-bg));
+  animation: winner-pulse .55s ease-out;
+}
+
+/* Winner cell glow for O */
+.classic-cell.winner.player-o {
+  background: color-mix(in srgb, var(--color-accent-2) 20%, var(--cell-bg));
 }
 
 .classic-cell.just-placed {
-  animation: cell-place 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cell-place .18s cubic-bezier(.34, 1.56, .64, 1);
 }
 
 .classic-cell.hint-cell {
   outline: 3px solid var(--color-accent-2) !important;
-  background: color-mix(in srgb, var(--color-accent-2) 20%, transparent) !important;
-  animation: hint-blink 0.4s ease-in-out 3;
+  background: color-mix(in srgb, var(--color-accent-2) 20%, var(--cell-bg)) !important;
+  animation: hint-blink .4s ease-in-out 3;
 }
 
-/* Win line SVG overlay */
+/* Win line SVG — spans the entire board */
 .win-line-svg {
   position: absolute;
   inset: 0;
-  width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   overflow: visible;
+  z-index: 10;
 }
 
-/* ── Ultimate Board ── */
+/* ══════════════════════════════════════
+   ULTIMATE BOARD
+   
+   Visual hierarchy:
+   ┌──────────── outer border (thick, bright) ─────────────┐
+   │  ┌── outer gap (separator between local boards) ──┐   │
+   │  │  ┌─ inner gap (cells within local board) ─┐    │   │
+   │  │  └─────────────────────────────────────────┘    │   │
+   │  └─────────────────────────────────────────────┘   │   │
+   └───────────────────────────────────────────────────┘
+══════════════════════════════════════ */
+
 .ultimate-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+
+  /* Outer grid: gap between local boards */
+  gap: calc(var(--outer-grid-width) * var(--outer-grid-visible));
+
+  /* Outer gap colour = brighter accent blend */
+  background: color-mix(
+    in srgb,
+    var(--color-accent-1) calc(var(--outer-grid-opacity) * 100%),
+    #030608
+  );
+
+  /* Responsive: never overflow viewport */
+  width: min(460px, calc(100vw - 20px));
+  margin: 4px auto;
+
+  border-radius: 14px;
+  overflow: hidden;
+
+  /* Outer frame border matches gap colour */
+  border: calc(var(--outer-grid-width) * var(--outer-grid-visible)) solid
+    color-mix(in srgb, var(--color-accent-1) calc(var(--outer-grid-opacity) * 100%), #030608);
 }
 
+/* Local board — one of the 9 mini boards */
 .local-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  border: 2px solid var(--color-border);
-  border-radius: 14px;
-  padding: 4px;
   position: relative;
-  transition: border-color var(--transition), box-shadow var(--transition), opacity var(--transition);
+
+  /* Inner gap between cells within a local board */
+  gap: calc(var(--inner-grid-width) * var(--inner-grid-visible));
+
+  /* Inner gap colour = dimmer accent blend */
+  background: color-mix(
+    in srgb,
+    var(--color-accent-1) calc(var(--inner-grid-opacity) * 100%),
+    var(--ult-cell-bg)
+  );
+
+  /* Small padding so cells don't butt up against outer gap */
+  padding: 2px;
+
+  transition: box-shadow var(--transition), opacity var(--transition);
 }
 
+/* Active board — bright pulsing glow */
 .local-board.active-board {
-  border-color: var(--color-accent-1);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--color-accent-1) 40%, transparent);
+  outline: 2px solid var(--color-accent-1);
+  outline-offset: -1px;
+  z-index: 3;
+  /* pulse animation defined in animations.css */
 }
 
+/* Inactive boards dim */
 .local-board.inactive-board {
-  opacity: 0.45;
+  opacity: .38;
 }
 
+/* Won boards are slightly dimmed but NOT fully opaque
+   so the overlay symbol is visible */
 .local-board.board-won {
-  opacity: 0.6;
+  opacity: .7;
 }
 
+/* Ultimate cells */
 .ult-cell {
   aspect-ratio: 1;
-  background: var(--color-surface);
-  border-radius: 6px;
+  background: var(--ult-cell-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(10px, 3vw, 18px);
+
+  /* Fluid font: scales with board width, clipped to readable range */
+  font-size: clamp(8px, calc((min(460px, 100vw - 20px) - 80px) / 27), 20px);
   font-weight: 800;
   cursor: pointer;
-  transition: background var(--transition), transform var(--transition);
+  transition: background var(--transition);
   user-select: none;
+  min-height: 0;
+  min-width: 0;
 }
 
 .ult-cell:hover:not(.player-x):not(.player-o) {
-  background: color-mix(in srgb, var(--color-accent-1) 20%, transparent);
+  background: color-mix(in srgb, var(--color-accent-1) 18%, var(--ult-cell-bg));
 }
 
 .ult-cell.player-x {
   color: var(--x-color, var(--color-accent-1));
-  text-shadow: 0 0 6px var(--x-color, var(--color-accent-1));
+  text-shadow: 0 0 5px var(--x-color, var(--color-accent-1));
 }
 
 .ult-cell.player-o {
   color: var(--o-color, var(--color-accent-2));
-  text-shadow: 0 0 6px var(--o-color, var(--color-accent-2));
+  text-shadow: 0 0 5px var(--o-color, var(--color-accent-2));
 }
 
-/* Local board won overlay */
+/* ── Local board won overlay ── */
 .local-board-won-overlay {
   position: absolute;
   inset: 0;
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(28px, 7vw, 48px);
+  font-size: clamp(22px, 6.5vw, 44px);
   font-weight: 900;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
-  background: rgba(0,0,0,0.55);
+  background: rgba(4, 7, 14, .72);
+  transition: opacity .28s;
+  z-index: 4;
 }
 
 .local-board-won-overlay.visible {
@@ -273,58 +439,68 @@
 
 .local-board-won-overlay.player-x {
   color: var(--color-accent-1);
-  text-shadow: 0 0 20px var(--color-accent-1);
+  text-shadow: 0 0 22px var(--color-accent-1), 0 0 40px var(--color-accent-1);
 }
 
 .local-board-won-overlay.player-o {
   color: var(--color-accent-2);
-  text-shadow: 0 0 20px var(--color-accent-2);
+  text-shadow: 0 0 22px var(--color-accent-2), 0 0 40px var(--color-accent-2);
 }
 
-/* ── Game actions row ── */
-.game-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  width: 100%;
+/* Draw overlay */
+.local-board-won-overlay.draw-board {
+  color: rgba(200, 200, 200, .6);
+  font-size: clamp(16px, 4vw, 28px);
+  letter-spacing: 0.05em;
 }
 
-/* ── Setup form ── */
+/* ══════════════════════════════════════
+   SETUP FORM
+══════════════════════════════════════ */
 .setup-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
   max-width: 440px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
-  padding: 24px 20px;
-  margin-bottom: 16px;
+  border-radius: 18px;
+  padding: 20px 16px;
+  margin-bottom: 14px;
 }
 
 .setup-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .setup-row label {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.7;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .62;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: .06em;
 }
 
-/* ── Replay board ── */
+/* ══════════════════════════════════════
+   REPLAY BOARD
+══════════════════════════════════════ */
 .replay-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-  max-width: 300px;
+  gap: calc(var(--grid-line-width) * var(--grid-lines-visible));
+  background: color-mix(
+    in srgb,
+    var(--color-accent-1) calc(var(--grid-line-opacity) * 100%),
+    var(--cell-bg)
+  );
+  border-radius: calc(var(--cell-radius, 16px) + 4px);
+  overflow: hidden;
+  border: calc(var(--grid-line-width) * var(--grid-lines-visible)) solid
+    color-mix(in srgb, var(--color-accent-1) calc(var(--grid-line-opacity) * 100%), var(--cell-bg));
+  width: min(280px, calc(100vw - 48px));
   margin: 0 auto;
 }
 
@@ -332,68 +508,66 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 12px 0;
+  margin: 10px 0;
 }
 
 .replay-step {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  min-width: 60px;
+  min-width: 55px;
   text-align: center;
 }
 
 .replay-info {
-  font-size: 15px;
-  opacity: 0.7;
-  margin-bottom: 8px;
+  font-size: 14px;
+  opacity: .65;
+  margin-bottom: 6px;
 }
 
-/* ── Statistics ── */
+/* ══════════════════════════════════════
+   STATISTICS
+══════════════════════════════════════ */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 9px;
   width: 100%;
   max-width: 440px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .stat-item {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 12px 14px;
+  border-radius: 13px;
+  padding: 11px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .stat-item.wide { grid-column: 1 / -1; }
 
 .stat-label {
-  font-size: 11px;
-  opacity: 0.55;
+  font-size: 10px;
+  opacity: .52;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: .05em;
 }
 
-.stat-val {
-  font-size: 24px;
-  font-weight: 800;
-}
-
+.stat-val { font-size: 22px; font-weight: 800; }
 .stat-val.green { color: #44dd44; }
-.stat-val.red { color: #ff5555; }
-.stat-val.gold { color: #ffcc44; }
+.stat-val.red   { color: #ff5555; }
+.stat-val.gold  { color: #ffcc44; }
 
 .stats-graph {
   width: 100%;
   max-width: 440px;
-  height: 160px;
-  border-radius: 14px;
+  height: 150px;
+  border-radius: 13px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: block;
 }
 
@@ -403,173 +577,273 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 180px;
+  max-height: 200px;
   overflow-y: auto;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.stats-history-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  opacity: .46;
+  padding: 4px 2px 2px;
+  width: 100%;
+  max-width: 440px;
 }
 
 .history-item {
-  font-size: 12px;
-  opacity: 0.7;
-  padding: 6px 10px;
+  padding: 9px 12px;
   background: var(--color-surface);
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
-/* ── Achievements ── */
+.history-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.history-item-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  opacity: .5;
+}
+
+.hist-result {
+  font-size: 12px;
+  font-weight: 700;
+}
+.hist-result.hist-win  { color: #44dd44; }
+.hist-result.hist-loss { color: #ff5555; }
+.hist-result.hist-draw { opacity: .7; }
+
+.hist-mode {
+  font-size: 11px;
+  opacity: .65;
+}
+
+/* ══════════════════════════════════════
+   ACHIEVEMENTS
+══════════════════════════════════════ */
+.ach-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 4px;
+}
+
+.ach-unlock-count {
+  font-size: 12px;
+  opacity: .55;
+  font-weight: 600;
+}
+
 .ach-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
   max-width: 440px;
+  overflow-y: auto;
+  max-height: calc(100dvh - 230px);
+  padding-right: 2px;
 }
 
 .ach-item {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 14px 16px;
-  opacity: 0.6;
-  transition: opacity var(--transition);
+  border-radius: 15px;
+  padding: 13px 14px;
+  opacity: .52;
+  transition: opacity var(--transition), border-color var(--transition), box-shadow var(--transition);
+  flex-shrink: 0;
 }
 
 .ach-item.unlocked {
   opacity: 1;
-  border-color: color-mix(in srgb, var(--color-accent-2) 40%, transparent);
-  background: color-mix(in srgb, var(--color-accent-2) 6%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-2) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent-2) 6%, var(--color-surface));
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-accent-2) 12%, transparent);
 }
 
 .ach-icon { font-size: 28px; flex-shrink: 0; }
+.ach-body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
-.ach-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.ach-name { font-size: 15px; font-weight: 700; }
-.ach-desc { font-size: 12px; opacity: 0.65; }
-.ach-progress-wrap { height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
-.ach-progress-bar { height: 100%; background: var(--color-accent-1); border-radius: 4px; transition: width 0.5s ease; }
-.ach-reward { font-size: 12px; color: var(--color-accent-2); font-weight: 600; }
+.ach-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-/* ── Settings ── */
+.ach-name { font-size: 14px; font-weight: 700; }
+
+.ach-unlocked-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-2);
+  background: color-mix(in srgb, var(--color-accent-2) 15%, transparent);
+  padding: 1px 6px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-accent-2) 30%, transparent);
+}
+
+.ach-desc { font-size: 11px; opacity: .62; line-height: 1.4; }
+
+.ach-progress-wrap {
+  height: 5px;
+  background: rgba(255,255,255,.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 3px 0 1px;
+}
+
+.ach-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent-1), var(--color-accent-2));
+  border-radius: 4px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+
+.ach-reward {
+  font-size: 11px;
+  color: var(--color-accent-2);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════
+   SETTINGS
+══════════════════════════════════════ */
 .settings-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 9px;
   width: 100%;
   max-width: 440px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  overflow-y: auto;
+  max-height: calc(100dvh - 200px);
 }
 
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 11px 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  gap: 12px;
+  border-radius: 13px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.setting-label { font-size: 15px; font-weight: 500; }
+.setting-label { font-size: 14px; font-weight: 500; }
 
 .settings-section-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.5;
-  padding: 8px 4px 4px;
+  letter-spacing: .08em;
+  opacity: .46;
+  padding: 6px 2px 2px;
 }
 
 .settings-version {
-  font-size: 12px;
-  opacity: 0.4;
+  font-size: 11px;
+  opacity: .38;
   text-align: center;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 
 /* Theme grid */
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 7px;
   width: 100%;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .theme-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 8px;
+  gap: 5px;
+  padding: 9px 7px;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
+  font-family: var(--font);
   transition: border-color var(--transition), background var(--transition);
 }
 
 .theme-btn.active {
   border-color: var(--color-accent-1);
-  background: color-mix(in srgb, var(--color-accent-1) 15%, transparent);
+  background: color-mix(in srgb, var(--color-accent-1) 14%, transparent);
 }
 
-.theme-btn.locked { opacity: 0.5; }
-
-.theme-preview {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-}
+.theme-btn.locked { opacity: .46; }
+.theme-preview { width: 26px; height: 26px; border-radius: 50%; }
 
 /* Color packs */
-.color-packs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-}
+.color-packs { display: flex; flex-direction: column; gap: 7px; padding: 2px 0; }
 
 .color-pack-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 9px;
+  padding: 9px 13px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 11px;
 }
 
-.color-pack-item.locked { opacity: 0.55; }
-.cp-preview { font-size: 18px; font-weight: 800; min-width: 40px; }
-.cp-name { flex: 1; font-size: 14px; font-weight: 600; }
+.color-pack-item.locked { opacity: .52; }
+.cp-preview { font-size: 17px; font-weight: 800; min-width: 38px; }
+.cp-name { flex: 1; font-size: 13px; font-weight: 600; }
 
 .cp-btn {
-  padding: 6px 14px;
-  border-radius: 10px;
+  padding: 6px 12px;
+  border-radius: 9px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--transition);
+  font-family: var(--font);
+  min-height: 36px;
 }
 
-.cp-btn:hover { background: color-mix(in srgb, var(--color-accent-1) 20%, transparent); }
+.cp-btn:hover {
+  background: color-mix(in srgb, var(--color-accent-1) 18%, transparent);
+}
 
 /* Board custom */
-.board-custom { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.board-custom { width: 100%; display: flex; flex-direction: column; gap: 9px; }
 
 input[type="range"] {
+  appearance: none;
   -webkit-appearance: none;
   height: 6px;
   border-radius: 4px;
@@ -580,60 +854,69 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px; height: 20px;
+  appearance: none;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--color-accent-1);
   cursor: pointer;
   box-shadow: 0 0 8px var(--glow-color);
 }
 
-/* ── About ── */
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent-1);
+  cursor: pointer;
+  border: none;
+}
+
+/* ══════════════════════════════════════
+   ABOUT
+══════════════════════════════════════ */
 .about-content {
   width: 100%;
   max-width: 440px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 15px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
-  padding: 28px 24px;
-  margin-bottom: 16px;
+  border-radius: 18px;
+  padding: 24px 20px;
+  margin-bottom: 14px;
 }
 
 .about-logo {
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 800;
   text-align: center;
   color: var(--color-accent-1);
-  text-shadow: 0 0 20px var(--glow-color);
+  text-shadow: 0 0 18px var(--glow-color);
   letter-spacing: 2px;
 }
 
 .about-logo span { color: var(--color-accent-2); }
-
-.about-version {
-  text-align: center;
-  font-size: 13px;
-  opacity: 0.5;
-}
-
+.about-version { text-align: center; font-size: 12px; opacity: .48; }
 .about-section { display: flex; flex-direction: column; gap: 2px; }
-.about-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; }
-.about-val { font-size: 15px; font-weight: 600; }
-.about-val-sub { font-size: 13px; opacity: 0.65; }
+.about-label { font-size: 10px; opacity: .48; text-transform: uppercase; letter-spacing: .06em; }
+.about-val { font-size: 14px; font-weight: 600; }
+.about-val-sub { font-size: 12px; opacity: .62; }
 
-/* ── Tutorial ── */
+/* ══════════════════════════════════════
+   TUTORIAL
+══════════════════════════════════════ */
 .tut-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
   max-width: 440px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.tut-step-indicator { font-size: 13px; opacity: 0.65; }
+.tut-step-indicator { font-size: 12px; opacity: .62; }
 
 .tut-instruction-box {
   width: 100%;
@@ -641,56 +924,139 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-left: 4px solid var(--color-accent-1);
-  border-radius: 14px;
-  padding: 16px 18px;
-  font-size: 15px;
+  border-radius: 13px;
+  padding: 14px 16px;
+  font-size: 14px;
   line-height: 1.65;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-.tut-board-wrap {
-  width: 100%;
-  max-width: 300px;
-  margin: 0 auto 16px;
-}
+.tut-board-wrap { width: 100%; max-width: 280px; margin: 0 auto 14px; }
 
 .tut-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: calc(var(--grid-line-width) * var(--grid-lines-visible));
+  background: color-mix(
+    in srgb,
+    var(--color-accent-1) calc(var(--grid-line-opacity) * 100%),
+    var(--cell-bg)
+  );
+  border-radius: calc(var(--cell-radius, 16px) + 4px);
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--color-accent-1) 22%, transparent);
 }
 
 .tut-cell {
   aspect-ratio: 1;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  background: var(--cell-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
   cursor: pointer;
   transition: background var(--transition);
 }
 
-.tut-cell:hover { background: color-mix(in srgb, var(--color-accent-1) 15%, transparent); }
+.tut-cell:hover {
+  background: color-mix(in srgb, var(--color-accent-1) 14%, var(--cell-bg));
+}
+
 .tut-cell.player-x { color: var(--color-accent-1); }
 .tut-cell.player-o { color: var(--color-accent-2); }
+.tut-controls { display: flex; gap: 10px; margin-bottom: 7px; }
 
-.tut-controls {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+.tut-cell.demo-x { color: var(--color-accent-1); opacity: .7; }
+.tut-cell.demo-o { color: var(--color-accent-2); opacity: .7; }
+.tut-cell.demo-win {
+  background: color-mix(in srgb, var(--color-accent-1) 20%, var(--cell-bg)) !important;
+  animation: winner-pulse .6s ease-out;
 }
 
-/* Tutorial highlight overlay */
 .tut-highlight {
   position: fixed;
-  border: 3px solid var(--color-accent-1);
+  border: 2px solid var(--color-accent-1);
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--color-accent-1);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.48), 0 0 18px var(--color-accent-1);
   pointer-events: none;
   z-index: 900;
-  transition: all 0.3s ease;
+  transition: all .3s ease;
 }
+
+/* ══════════════════════════════════════
+   LIGHT MODE BOARD OVERRIDES
+   (placed here so they're near the board
+   rules they override)
+══════════════════════════════════════ */
+.light-mode {
+  --cell-bg: #f0f4ff;
+  --ult-cell-bg: #f0f4ff;
+}
+
+.light-mode .classic-board,
+.light-mode .tut-board,
+.light-mode .replay-board {
+  background: color-mix(
+    in srgb,
+    #1a73e8 calc(var(--grid-line-opacity) * 70%),
+    rgba(0,0,0,.18)
+  );
+  border-color: color-mix(in srgb, #1a73e8 35%, rgba(0,0,0,.2));
+}
+
+.light-mode .ultimate-board {
+  background: color-mix(
+    in srgb,
+    #1a73e8 calc(var(--outer-grid-opacity) * 65%),
+    rgba(0,0,0,.2)
+  );
+  border-color: color-mix(in srgb, #1a73e8 40%, rgba(0,0,0,.25));
+}
+
+.light-mode .local-board {
+  background: color-mix(
+    in srgb,
+    #1a73e8 calc(var(--inner-grid-opacity) * 55%),
+    rgba(0,0,0,.1)
+  );
+}
+
+.light-mode .local-board-won-overlay {
+  background: rgba(220, 232, 255, .88);
+}
+
+.light-mode .classic-cell,
+.light-mode .tut-cell,
+.light-mode .ult-cell {
+  background: var(--cell-bg);
+  color: #182040;
+}
+
+.light-mode .classic-cell:hover:not(.player-x):not(.player-o),
+.light-mode .tut-cell:hover,
+.light-mode .ult-cell:hover:not(.player-x):not(.player-o) {
+  background: color-mix(in srgb, #1a73e8 12%, var(--cell-bg));
+}
+
+.light-mode .classic-cell.winner {
+  background: color-mix(in srgb, #1a73e8 18%, var(--cell-bg));
+}
+
+.light-mode .stats-graph {
+  background: rgba(255,255,255,.72);
+  border-color: rgba(26,115,232,.15);
+}
+
+.light-mode .ach-item {
+  background: rgba(255,255,255,.72);
+  border-color: rgba(26,115,232,.12);
+}
+.light-mode .ach-item.unlocked {
+  border-color: color-mix(in srgb,#0f9d58 40%,transparent);
+  background: color-mix(in srgb,#0f9d58 6%,rgba(255,255,255,.8));
+}
+
+.light-mode .settings-list,
+.light-mode .settings-section-title { color: #182040; opacity:1; }
+.light-mode .settings-section-title { opacity:.55; }
