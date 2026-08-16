@@ -298,6 +298,13 @@ function handleGlobalDraw() {
 
 function endGame(result) {
   const duration = Math.round((Date.now() - state.startTime) / 1000);
+
+  // Check special achievement conditions
+  const beatImpossible = state.vsAI &&
+    result !== 'draw' &&
+    result !== state.aiPlayer &&
+    state.difficulty === 'impossible';
+
   const statsResult = {
     mode: 'ultimate',
     winner: result,
@@ -307,9 +314,16 @@ function endGame(result) {
     vsAI: state.vsAI,
     difficulty: state.vsAI ? state.difficulty : null,
     moveCount: state.moveHistory.length,
+    beatImpossible,
   };
+
   const coinsEarned = Statistics.record(statsResult);
   const stats = Statistics.get();
+
+  // Persist special flags for achievement checks (mirrors classic.js logic)
+  if (beatImpossible) stats.beatImpossible = true;
+  Storage.set('statistics', stats);
+
   Achievements.check(stats, showToast);
   updateCoinDisplay();
 
@@ -332,7 +346,7 @@ function updateCoinDisplay() {
   if (achBal) achBal.textContent = coins;
 }
 
-// ── AI Move ───────────────────────────────────────────
+// ── AI Move — uses difficulty levels ──────────────────
 function scheduleAIMove() {
   if (state.gameOver) return;
   dom.aiThinking.style.display = '';
@@ -340,18 +354,100 @@ function scheduleAIMove() {
   setTimeout(() => {
     if (state.gameOver) { dom.aiThinking.style.display = 'none'; return; }
     dom.aiThinking.style.display = 'none';
-    // Find all playable cells
-    const playable = [];
-    for (let b = 0; b < 9; b++) {
-      for (let c = 0; c < 9; c++) {
-        if (isCellPlayable(b, c)) playable.push({ b, c });
+
+    const move = getBestUltimateMove();
+    if (move) placeMove(move.b, move.c, state.aiPlayer);
+  }, delay);
+}
+
+/**
+ * Pick the best move for the AI in Ultimate mode.
+ *
+ * Strategy (scales with difficulty):
+ *  1. Determine which boards are currently playable.
+ *  2. For each playable board, use AI.getBestMove on that local 3×3
+ *     board to find the locally-optimal cell.
+ *  3. Among those locally-optimal moves, prefer:
+ *       a) A move that wins a local board outright
+ *       b) A move where the resulting routed board is already won/full
+ *          (gives opponent free choice — tactically sometimes useful)
+ *       c) Otherwise the AI's locally best pick
+ *  4. Random-chance bypass controlled by difficulty (same as classic AI).
+ *
+ * @returns {{ b: number, c: number } | null}
+ */
+function getBestUltimateMove() {
+  // Collect all playable {b, c} pairs
+  const playable = [];
+  for (let b = 0; b < 9; b++) {
+    for (let c = 0; c < 9; c++) {
+      if (isCellPlayable(b, c)) playable.push({ b, c });
+    }
+  }
+  if (playable.length === 0) return null;
+
+  // Difficulty random-bypass (same percentages as classic AI)
+  const randomChance = { beginner:.80, easy:.50, medium:.30, hard:.10, impossible:0 };
+  const chance = randomChance[state.difficulty] ?? 0;
+  if (Math.random() < chance) {
+    return playable[Math.floor(Math.random() * playable.length)];
+  }
+
+  // Group playable moves by board
+  const byBoard = {};
+  playable.forEach(({ b, c }) => {
+    if (!byBoard[b]) byBoard[b] = [];
+    byBoard[b].push(c);
+  });
+
+  const maxDepth = { beginner:1, easy:2, medium:4, hard:9, impossible:9 }[state.difficulty] ?? 4;
+
+  // For each active board, ask AI for the best local cell
+  let bestMove = null;
+  let bestScore = -Infinity;
+
+  for (const [boardIdx, cells] of Object.entries(byBoard)) {
+    const b = Number(boardIdx);
+    const localBoard = [...state.boards[b]]; // copy so AI doesn't mutate state
+
+    // Get AI's best local move on this mini-board
+    const aiCell = AI.getBestMove(localBoard, state.difficulty, state.aiPlayer);
+    // Fallback to first playable cell if AI returns null or an unplayable index
+    const chosenCell = (aiCell !== null && cells.includes(aiCell)) ? aiCell : cells[0];
+
+    // Score this (board, cell) choice:
+    // Base: minimax score from AI perspective on local board
+    // Bonus: if this move wins the local board, that's strategically strong
+    const testBoard = [...localBoard];
+    testBoard[chosenCell] = state.aiPlayer;
+    const localResult = checkBoard(testBoard);
+
+    let moveScore = 0;
+
+    if (localResult === state.aiPlayer) {
+      // Wins local board — strong move
+      moveScore = 100;
+      // Even better if it advances the global win
+      const testGlobal = [...state.globalBoard];
+      testGlobal[b] = state.aiPlayer;
+      const globalResult = checkBoard(testGlobal);
+      if (globalResult === state.aiPlayer) moveScore = 1000; // wins the game!
+    } else if (localResult === null) {
+      // Board not won yet — evaluate the routed destination
+      // Prefer routing opponent to a board that's already won/full (free choice)
+      const destBoard = chosenCell;
+      if (state.boardWinners[destBoard] !== null) {
+        moveScore = 15; // opponent gets free choice — acceptable
       }
     }
-    if (playable.length > 0) {
-      const choice = playable[Math.floor(Math.random() * playable.length)];
-      placeMove(choice.b, choice.c, state.aiPlayer);
+
+    if (moveScore > bestScore) {
+      bestScore = moveScore;
+      bestMove = { b, c: chosenCell };
     }
-  }, delay);
+  }
+
+  return bestMove || playable[Math.floor(Math.random() * playable.length)];
 }
 
 // ── Action button state ───────────────────────────────

@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/hogwarts.css">
   <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body class="dark-mode">
@@ -52,34 +53,45 @@
 
   <!-- ═══════════════════ GAME SELECT ═══════════════════ -->
   <div id="gameSelectScreen" class="screen screen-card" style="display:none">
-    <h2 class="game-select-title">Choose Your Game</h2>
-    <p class="game-select-sub">Pick a mode and start playing</p>
-    <div class="game-select-cards">
-      <button class="game-select-card game-select-classic" id="selectClassicBtn" aria-label="Classic Tic-Tac-Toe">
-        <div class="gsc-badge">Classic</div>
-        <div class="gsc-icon">✕○</div>
-        <div class="gsc-title">Classic</div>
-        <div class="gsc-desc">Traditional 3×3 Tic-Tac-Toe. First to get three in a row wins.</div>
-        <div class="gsc-tags">
-          <span>1–2 Players</span>
-          <span>vs AI</span>
-          <span>Quick</span>
-        </div>
-        <div class="gsc-arrow">▶ Play Classic</div>
-      </button>
-      <button class="game-select-card game-select-ultimate" id="selectUltimateBtn" aria-label="Ultimate Tic-Tac-Toe">
-        <div class="gsc-badge gsc-badge-ultimate">Ultimate</div>
-        <div class="gsc-icon gsc-icon-ultimate">⊞</div>
-        <div class="gsc-title">Ultimate</div>
-        <div class="gsc-desc">9 boards within a board. Strategy, depth and mind games at every turn.</div>
-        <div class="gsc-tags">
-          <span>1–2 Players</span>
-          <span>Strategy</span>
-          <span>Advanced</span>
-        </div>
-        <div class="gsc-arrow gsc-arrow-ultimate">▶ Play Ultimate</div>
-      </button>
+    <div class="gsel-header">
+      <h2 class="gsel-title">Select Mode</h2>
+      <p class="gsel-sub">Choose your battlefield</p>
     </div>
+
+    <div class="gsel-cards">
+
+      <!-- Classic -->
+      <button class="gsel-card gsel-classic" id="selectClassicBtn" aria-label="Play Classic Tic-Tac-Toe">
+        <div class="gsel-card-bg"></div>
+        <div class="gsel-card-glow"></div>
+        <div class="gsel-card-inner">
+          <div class="gsel-icon">✕○</div>
+          <div class="gsel-info">
+            <span class="gsel-name">Classic</span>
+            <span class="gsel-tagline">Outsmart. Outplay. Win.</span>
+          </div>
+          <span class="gsel-chevron">›</span>
+        </div>
+        <div class="gsel-stripe"></div>
+      </button>
+
+      <!-- Ultimate -->
+      <button class="gsel-card gsel-ultimate" id="selectUltimateBtn" aria-label="Play Ultimate Tic-Tac-Toe">
+        <div class="gsel-card-bg"></div>
+        <div class="gsel-card-glow"></div>
+        <div class="gsel-card-inner">
+          <div class="gsel-icon gsel-icon-ult">⊞</div>
+          <div class="gsel-info">
+            <span class="gsel-name">Ultimate</span>
+            <span class="gsel-tagline">Every move reshapes the game.</span>
+          </div>
+          <span class="gsel-chevron">›</span>
+        </div>
+        <div class="gsel-stripe gsel-stripe-ult"></div>
+      </button>
+
+    </div>
+
     <button class="btn-back" data-back aria-label="Back">← Back</button>
   </div>
 

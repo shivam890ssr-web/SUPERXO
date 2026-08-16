@@ -4,6 +4,7 @@
  * Classic and Neon are free by default.
  */
 import { Storage } from './storage.js';
+import { ThemeMusic } from './themeMusic.js';
 
 const THEMES = [
   {
@@ -166,12 +167,36 @@ const THEMES = [
       '--glow-color': '#00ffff',
     },
   },
+  {
+    id: 'hogwarts',
+    name: 'Hogwarts',
+    coinCost: 500,
+    description: '✨ A magical Wizarding World edition',
+    vars: {
+      /* Deep castle darkness — stone walls at night */
+      '--color-bg-1': '#1a1008',
+      '--color-bg-2': '#0a0804',
+      /* Antique gold wand glow as primary accent */
+      '--color-accent-1': '#c8971a',
+      /* Magical crimson/scarlet as secondary (Gryffindor) */
+      '--color-accent-2': '#c0392b',
+      /* Parchment-tinted surfaces */
+      '--color-surface': 'rgba(200,151,26,0.07)',
+      '--color-border': 'rgba(200,151,26,0.20)',
+      /* Aged parchment text */
+      '--color-text': '#f5e6c8',
+      /* Golden candlelight glow */
+      '--glow-color': '#d4a017',
+    },
+  },
 ];
 
 const THEME_MAP = Object.fromEntries(THEMES.map(t => [t.id, t]));
 
 /**
  * Apply a theme by setting CSS custom properties on :root.
+ * Also toggles special body classes for themes that need extra CSS,
+ * and starts/stops theme-specific music.
  * @param {string} themeName
  */
 function apply(themeName) {
@@ -183,6 +208,13 @@ function apply(themeName) {
   for (const [prop, val] of Object.entries(theme.vars)) {
     root.style.setProperty(prop, val);
   }
+  // Remove all special theme classes, then add the active one
+  document.body.classList.remove('theme-hogwarts');
+  if (theme.id === 'hogwarts') {
+    document.body.classList.add('theme-hogwarts');
+  }
+  // Start/stop theme-specific music
+  ThemeMusic.playForTheme(theme.id);
   Storage.set('theme', theme.id);
 }
 

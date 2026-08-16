@@ -419,25 +419,22 @@
   justify-content: center;
 
   /*
-   * Font formula explanation:
-   *   board_size = var(--ult-board-size) ≈ min(460px, 100vw-20px)
-   *   usable_per_board ≈ board_size / 3   (one local board width)
-   *   overhead (gaps + padding) ≈ 20px per board
-   *   usable_per_cell ≈ (board_size/3 - 20) / 3
-   *   scale factor 1.1 → comfortably fills the cell
-   *
-   * clamp ensures:
-   *   - never smaller than 7px (visible on 320px)
-   *   - never larger than 20px (not overwhelming)
+   * X/O fills ~85% of each cell.
+   * Each cell ≈ board_width / 9 ≈ (100vw - 20px) / 9 ≈ 11vw on phone.
+   * 85% of that ≈ 9.5vw.
+   * On 360px → 9.5vw ≈ 34px per cell of ~38px → good fill.
+   * Capped at 52px so it doesn't overflow on desktop.
+   * Floor at 20px for tiny 320px phones.
    */
-  font-size: clamp(7px, calc((var(--ult-board-size) / 9) - 6px), 20px);
-  font-weight: 800;
+  font-size: clamp(20px, 9.5vw, 52px);
+  font-weight: 900;
+  line-height: 1;
   cursor: pointer;
   transition: background var(--transition);
   user-select: none;
-  /* Prevent grid blowout */
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .ult-cell:hover:not(.player-x):not(.player-o) {

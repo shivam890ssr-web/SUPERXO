@@ -13,6 +13,7 @@ import { Achievements } from './achievements.js';
 import { Replay } from './replay.js';
 import { wireTutorialScreenEvents } from './tutorial.js';
 import { Music } from './music.js';
+import { ThemeMusic } from './themeMusic.js';
 
 const APP_VERSION = '1.0.0';
 
@@ -105,17 +106,19 @@ function onScreenEnter(screenId) {
 
 // ── Init ───────────────────────────────────────────────
 function initApp() {
-  // Apply theme and settings first
+  // Apply theme CSS vars and settings immediately (no audio — just visual)
   Theme.apply(Theme.getCurrent());
   Settings.applyAll();
   applyBoardCustom();
 
-  // Initialise music (restores any previously loaded track from IndexedDB)
+  // Initialise BGM (restores custom track from IndexedDB)
   Music.init().then(() => {
     refreshBgmUI();
-    // Apply saved music enabled state
     const musicEnabled = Settings.get('music');
     Music.setEnabled(musicEnabled !== false);
+    ThemeMusic.setEnabled(musicEnabled !== false);
+    // Theme music requires a prior user gesture — start AFTER first interaction
+    // (handled in showSplash / skipSplash below via _startThemeMusicAfterGesture)
   });
 
   // Migrate: ensure Classic + Neon are always unlocked (free themes)
@@ -169,7 +172,6 @@ function showSplash() {
   const continueText = document.getElementById('splashContinueText');
 
   let value = 0;
-  // ~5 seconds (100 steps × 50ms)
   const interval = setInterval(() => {
     value = Math.min(value + 2, 100);
     progress.style.width = value + '%';
@@ -184,6 +186,8 @@ function showSplash() {
     if (value >= 100) {
       document.removeEventListener('click', proceed);
       Storage.set('splashSeen', true);
+      // User gesture happened — safe to start audio
+      _startThemeMusicAfterGesture();
       navigate('homeScreen');
     }
   };
@@ -193,7 +197,30 @@ function showSplash() {
 function skipSplash() {
   const splash = document.getElementById('splashScreen');
   if (splash) splash.style.display = 'none';
+  // For returning users: wire a one-time interaction listener
+  // so music starts on first tap anywhere (browser autoplay policy)
+  const onFirstTap = () => {
+    document.removeEventListener('click', onFirstTap);
+    document.removeEventListener('touchstart', onFirstTap);
+    _startThemeMusicAfterGesture();
+  };
+  document.addEventListener('click', onFirstTap, { once: true });
+  document.addEventListener('touchstart', onFirstTap, { once: true });
   navigate('homeScreen');
+}
+
+/**
+ * Start theme music for the currently active theme.
+ * Must only be called after a user gesture (tap/click) so browsers
+ * allow AudioContext creation and playback.
+ */
+function _startThemeMusicAfterGesture() {
+  const musicEnabled = Settings.get('music');
+  if (!musicEnabled) return;
+  const currentTheme = Theme.getCurrent();
+  if (currentTheme === 'hogwarts') {
+    ThemeMusic.playForTheme('hogwarts');
+  }
 }
 
 // ── Home coin display ─────────────────────────────────
@@ -315,7 +342,10 @@ function wireSettingsEvents() {
     { id: 'toggleSound', key: 'sound' },
     {
       id: 'toggleMusic', key: 'music',
-      onChange: (next) => Music.setEnabled(next),
+      onChange: (next) => {
+        Music.setEnabled(next);
+        ThemeMusic.setEnabled(next);
+      },
     },
     { id: 'toggleTimerDefault', key: 'timerDefault' },
   ];

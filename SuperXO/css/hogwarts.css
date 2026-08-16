@@ -1,0 +1,630 @@
+/* ═══════════════════════════════════════════════════════
+   hogwarts.css — Wizarding World Edition of SuperXO
+   Mobile-first. Activated by: body.theme-hogwarts
+
+   All images: Unsplash License (free for commercial & personal use)
+   Sources:
+     - photo-1519681393784-d120267933ba  Starry mountain night (Bailey Zindel)
+     - photo-1534796636912-3b584831f999  Purple aurora night sky (Shot by Cerqueira)
+     - photo-1462275646964-a0e3386b89fa  Dark forest path at night (Jeremy Bishop)
+     - photo-1507003211169-0a1dd7228f2d  Candle bokeh dark (Levi XU)
+     - photo-1518709268805-4e9042af9f23  Dark misty forest (v2osk)
+
+   Palette:
+     Deep black         #08060a
+     Dark indigo        #0d0520
+     Midnight violet    #1a0a2e
+     Antique gold       #c8971a
+     Warm amber         #d4850a
+     Scarlet            #8b1a1a
+     Parchment          #f5e6c8
+     Lavender           #c4b5fd
+═══════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════
+   BODY — magical dark night background
+   Layers (bottom to top):
+   1. Dark indigo-purple nebula/starry sky
+   2. Bottom golden candlelight warmth
+   3. Top purple mist
+══════════════════════════════════════ */
+.theme-hogwarts {
+  background-color: #08060a !important;
+  background-image:
+    radial-gradient(ellipse 100% 35% at 50% 100%,  rgba(140, 80, 8, .22)  0%, transparent 60%),
+    radial-gradient(ellipse 100% 35% at 50% 0%,    rgba(60, 10, 100, .28) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(8,6,10,.45) 0%, rgba(8,5,18,.30) 50%, rgba(8,6,10,.55) 100%),
+    url('https://images.unsplash.com/photo-1534796636912-3b584831f999?w=800&q=75&auto=format&fit=crop&crop=center')
+    !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Per-screen overlay — each screen gets its own mood */
+.theme-hogwarts .screen {
+  background: linear-gradient(
+    180deg,
+    rgba(8,5,18,.65) 0%,
+    rgba(12,7,24,.55) 45%,
+    rgba(8,5,14,.70) 100%
+  );
+  backdrop-filter: none;
+}
+
+/* Game screens — darker, more focused atmosphere */
+.theme-hogwarts .screen-game {
+  background: linear-gradient(
+    180deg,
+    rgba(4,3,10,.78) 0%,
+    rgba(8,5,18,.72) 100%
+  );
+}
+
+/* Home screen — most atmospheric, lightest overlay */
+.theme-hogwarts .screen-home {
+  background: linear-gradient(
+    180deg,
+    rgba(8,4,20,.50) 0%,
+    rgba(12,6,24,.45) 40%,
+    rgba(8,4,16,.60) 100%
+  );
+}
+
+/* ══════════════════════════════════════
+   MAGICAL SPARKLE LAYER (CSS-only)
+   Subtle gold particle dots, breathing
+══════════════════════════════════════ */
+.theme-hogwarts::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle 1.5px at  8% 12%, rgba(255,215,80,.65) 0%, transparent 100%),
+    radial-gradient(circle 1px  at 22%  5%, rgba(200,151,26,.55)  0%, transparent 100%),
+    radial-gradient(circle 2px  at 38% 18%, rgba(255,215,80,.70)  0%, transparent 100%),
+    radial-gradient(circle 1px  at 55%  8%, rgba(200,151,26,.50)  0%, transparent 100%),
+    radial-gradient(circle 1.5px at 71% 14%, rgba(255,215,80,.60) 0%, transparent 100%),
+    radial-gradient(circle 1px  at 88%  6%, rgba(200,151,26,.55)  0%, transparent 100%),
+    radial-gradient(circle 1px  at 15% 30%, rgba(255,215,80,.45)  0%, transparent 100%),
+    radial-gradient(circle 2px  at 48% 25%, rgba(200,151,26,.60)  0%, transparent 100%),
+    radial-gradient(circle 1px  at 80% 32%, rgba(255,215,80,.50)  0%, transparent 100%),
+    radial-gradient(circle 1.5px at 5%  52%, rgba(200,151,26,.45) 0%, transparent 100%),
+    radial-gradient(circle 1px  at 35% 60%, rgba(255,215,80,.55)  0%, transparent 100%),
+    radial-gradient(circle 2px  at 65% 48%, rgba(200,151,26,.60)  0%, transparent 100%),
+    radial-gradient(circle 1px  at 92% 55%, rgba(255,215,80,.45)  0%, transparent 100%),
+    radial-gradient(circle 1.5px at 25% 78%, rgba(200,151,26,.50) 0%, transparent 100%),
+    radial-gradient(circle 1px  at 75% 82%, rgba(255,215,80,.55)  0%, transparent 100%),
+    radial-gradient(circle 1px  at 50% 92%, rgba(200,151,26,.45)  0%, transparent 100%);
+  animation: hp-sparkle 10s ease-in-out infinite alternate;
+}
+
+@keyframes hp-sparkle {
+  0%   { opacity: .55; transform: scale(1);    }
+  50%  { opacity: .90; transform: scale(1.008); }
+  100% { opacity: .65; transform: scale(.995);  }
+}
+
+/* No particles on game board screens — keep gameplay clean */
+.theme-hogwarts .screen-game::before { display: none; }
+
+/* ══════════════════════════════════════
+   TYPOGRAPHY
+══════════════════════════════════════ */
+.theme-hogwarts h2 {
+  color: #f5e6c8;
+  text-shadow: 0 0 20px rgba(200,151,26,.4);
+  letter-spacing: .04em;
+}
+
+.theme-hogwarts .subtitle {
+  color: rgba(245,230,200,.52);
+  letter-spacing: .06em;
+}
+
+/* ══════════════════════════════════════
+   LOGO — liquid gold shimmer
+══════════════════════════════════════ */
+.theme-hogwarts .logo {
+  background: linear-gradient(120deg,
+    #f5e6c8 0%, #c8971a 28%, #ffdd88 50%, #c8971a 72%, #f5e6c8 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 10px rgba(200,151,26,.45));
+  animation: hp-logo-shimmer 4s linear infinite;
+}
+.theme-hogwarts .logo span {
+  background: linear-gradient(120deg, #d4850a, #ffcc44, #d4850a);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes hp-logo-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.theme-hogwarts .home-coin-bar,
+.theme-hogwarts .ach-coin-bar { color: #c8971a; }
+
+/* ══════════════════════════════════════
+   HOME MENU BUTTONS — glass cards
+══════════════════════════════════════ */
+.theme-hogwarts .btn-menu {
+  background: rgba(30,15,60,.55);
+  border-color: rgba(200,151,26,.28);
+  color: #f5e6c8;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.theme-hogwarts .btn-menu:hover,
+.theme-hogwarts .btn-menu:focus-visible {
+  background: rgba(200,151,26,.18);
+  border-color: rgba(200,151,26,.55);
+  box-shadow: 0 0 16px rgba(200,151,26,.2);
+}
+
+/* ══════════════════════════════════════
+   PRIMARY BUTTON — molten gold
+══════════════════════════════════════ */
+.theme-hogwarts .btn-primary {
+  background: linear-gradient(90deg, #7a4e06, #c8971a, #f0c060, #c8971a, #7a4e06);
+  background-size: 300% 100%;
+  color: #1a0e04;
+  font-weight: 800;
+  letter-spacing: .04em;
+  border: none;
+  box-shadow: 0 0 22px rgba(200,151,26,.35), inset 0 1px 0 rgba(255,220,100,.3);
+  animation: hp-gold-flow 5s ease infinite;
+}
+@keyframes hp-gold-flow {
+  0%   { background-position: 0% 0;   }
+  50%  { background-position: 100% 0; }
+  100% { background-position: 0% 0;   }
+}
+.theme-hogwarts .btn-primary:hover {
+  box-shadow: 0 0 36px rgba(200,151,26,.6), 0 0 70px rgba(200,151,26,.2);
+  transform: translateY(-3px);
+}
+
+/* ══════════════════════════════════════
+   OTHER BUTTONS
+══════════════════════════════════════ */
+.theme-hogwarts .btn-back {
+  background: rgba(30,15,50,.55);
+  border-color: rgba(200,151,26,.28);
+  color: #f5e6c8;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.theme-hogwarts .btn-back:hover {
+  background: rgba(200,151,26,.18);
+  border-color: rgba(200,151,26,.55);
+}
+
+.theme-hogwarts .btn-action {
+  background: rgba(30,15,50,.55);
+  border-color: rgba(200,151,26,.22);
+  color: #f5e6c8;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.theme-hogwarts .btn-action:hover:not(:disabled) {
+  background: rgba(200,151,26,.2);
+  border-color: rgba(200,151,26,.55);
+  box-shadow: 0 0 12px rgba(200,151,26,.2);
+}
+
+.theme-hogwarts .btn-card {
+  background: rgba(20,10,40,.58);
+  border-color: rgba(200,151,26,.25);
+  color: #f5e6c8;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.theme-hogwarts .btn-card:hover {
+  background: rgba(200,151,26,.15);
+  border-color: rgba(200,151,26,.5);
+  box-shadow: 0 8px 28px rgba(200,151,26,.2);
+}
+
+.theme-hogwarts .btn-danger {
+  border-color: rgba(139,26,26,.45);
+  background: rgba(139,26,26,.12);
+  color: #e08070;
+}
+.theme-hogwarts .btn-danger:hover { background: rgba(139,26,26,.22); }
+
+/* ══════════════════════════════════════
+   GLASS SURFACES — frosted parchment
+══════════════════════════════════════ */
+.theme-hogwarts .game-scores,
+.theme-hogwarts .turn-indicator,
+.theme-hogwarts .setup-form,
+.theme-hogwarts .stat-item,
+.theme-hogwarts .ach-item,
+.theme-hogwarts .setting-row,
+.theme-hogwarts .about-content,
+.theme-hogwarts .tut-instruction-box,
+.theme-hogwarts .history-item,
+.theme-hogwarts .color-pack-item,
+.theme-hogwarts .theme-row {
+  background: rgba(18,10,36,.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-color: rgba(200,151,26,.26);
+  color: #f5e6c8;
+  box-shadow: 0 4px 28px rgba(0,0,0,.6), inset 0 1px 0 rgba(200,151,26,.12);
+}
+
+/* ══════════════════════════════════════
+   TURN INDICATOR
+══════════════════════════════════════ */
+.theme-hogwarts .turn-indicator.player-x-active {
+  border-color: rgba(200,151,26,.72);
+  box-shadow: 0 0 20px rgba(200,151,26,.28), inset 0 0 10px rgba(200,151,26,.08);
+  background: rgba(200,151,26,.12);
+}
+.theme-hogwarts .turn-indicator.player-o-active {
+  border-color: rgba(139,26,26,.68);
+  box-shadow: 0 0 20px rgba(139,26,26,.24), inset 0 0 10px rgba(139,26,26,.08);
+  background: rgba(139,26,26,.1);
+}
+
+/* ══════════════════════════════════════
+   SCORE / STAT COLORS
+══════════════════════════════════════ */
+.theme-hogwarts .score-val             { color: #c8971a; }
+.theme-hogwarts .score-draw .score-val { color: rgba(245,230,200,.5); }
+.theme-hogwarts .stat-val.green        { color: #5cb85c; }
+.theme-hogwarts .stat-val.red          { color: #c0392b; }
+.theme-hogwarts .stat-val.gold         { color: #c8971a; }
+
+/* ══════════════════════════════════════
+   DIALOG — enchanted scroll
+══════════════════════════════════════ */
+.theme-hogwarts .dialog-box {
+  background: rgba(10,6,22,.92);
+  border: 1px solid rgba(200,151,26,.42);
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.85),
+    0 0 50px rgba(200,151,26,.14),
+    inset 0 1px 0 rgba(200,151,26,.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.theme-hogwarts .dialog-title {
+  color: #c8971a;
+  text-shadow: 0 0 14px rgba(200,151,26,.5);
+}
+.theme-hogwarts .dialog-message { color: rgba(245,230,200,.9); }
+.theme-hogwarts .dialog-btn {
+  background: rgba(200,151,26,.09);
+  border-color: rgba(200,151,26,.32);
+  color: #f5e6c8;
+  backdrop-filter: blur(4px);
+}
+.theme-hogwarts .dialog-btn:first-child {
+  background: linear-gradient(90deg, #7a4e06, #c8971a);
+  color: #1a0e04;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+.theme-hogwarts .toast {
+  background: linear-gradient(135deg, #c8971a, #8b5e08);
+  color: #1a0e04;
+  font-weight: 700;
+  box-shadow: 0 6px 24px rgba(200,151,26,.45);
+}
+
+/* ══════════════════════════════════════
+   INPUTS & SELECTS
+══════════════════════════════════════ */
+.theme-hogwarts input[type="text"],
+.theme-hogwarts select {
+  background: rgba(30,15,55,.65);
+  border-color: rgba(200,151,26,.30);
+  color: #f5e6c8;
+  backdrop-filter: blur(6px);
+}
+.theme-hogwarts input[type="text"]:focus,
+.theme-hogwarts select:focus { border-color: rgba(200,151,26,.7); }
+.theme-hogwarts select option { background: #100c20; color: #f5e6c8; }
+
+/* ══════════════════════════════════════
+   TOGGLES
+══════════════════════════════════════ */
+.theme-hogwarts .toggle-switch     { background: rgba(200,151,26,.22); }
+.theme-hogwarts .toggle-switch.on  { background: #c8971a; }
+.theme-hogwarts .toggle-btn {
+  background: rgba(30,15,55,.55);
+  border-color: rgba(200,151,26,.24);
+  color: #f5e6c8;
+}
+.theme-hogwarts .toggle-btn.active {
+  background: rgba(200,151,26,.24);
+  border-color: #c8971a;
+  color: #c8971a;
+}
+
+/* ══════════════════════════════════════
+   ACHIEVEMENTS
+══════════════════════════════════════ */
+.theme-hogwarts .ach-item.unlocked {
+  border-color: rgba(200,151,26,.52);
+  background: rgba(200,151,26,.12);
+  box-shadow: 0 4px 18px rgba(200,151,26,.16);
+}
+.theme-hogwarts .ach-progress-bar { background: linear-gradient(90deg, #7a4e06, #c8971a, #f0c060); }
+.theme-hogwarts .ach-reward { color: #c8971a; }
+.theme-hogwarts .ach-unlocked-badge {
+  color: #c8971a;
+  background: rgba(200,151,26,.16);
+  border-color: rgba(200,151,26,.32);
+}
+
+/* ══════════════════════════════════════
+   CLASSIC BOARD — obsidian + gold grid
+══════════════════════════════════════ */
+.theme-hogwarts .classic-board {
+  background: color-mix(in srgb, #c8971a calc(var(--grid-line-opacity) * 100%), #08050c);
+  border-color: color-mix(in srgb, #c8971a calc(var(--grid-line-opacity) * 100%), #08050c);
+  box-shadow: 0 0 36px rgba(200,151,26,.16), 0 10px 40px rgba(0,0,0,.7);
+}
+.theme-hogwarts .classic-cell { background: #0e0b16; }
+.theme-hogwarts .classic-cell:hover:not(.player-x):not(.player-o) {
+  background: rgba(200,151,26,.14);
+}
+.theme-hogwarts .classic-cell.winner          { background: rgba(200,151,26,.22); }
+.theme-hogwarts .classic-cell.winner.player-o { background: rgba(139,26,26,.22); }
+
+/* ══════════════════════════════════════
+   ULTIMATE BOARD
+══════════════════════════════════════ */
+.theme-hogwarts .ultimate-board {
+  background: color-mix(in srgb, #c8971a calc(var(--outer-grid-opacity) * 100%), #06040a);
+  border-color: color-mix(in srgb, #c8971a calc(var(--outer-grid-opacity) * 100%), #06040a);
+  box-shadow: 0 0 36px rgba(200,151,26,.14), 0 10px 40px rgba(0,0,0,.7);
+}
+.theme-hogwarts .local-board {
+  background: color-mix(in srgb, #c8971a calc(var(--inner-grid-opacity) * 100%), #0a071a);
+}
+.theme-hogwarts .ult-cell { background: #100d1a; }
+.theme-hogwarts .ult-cell:hover:not(.player-x):not(.player-o) {
+  background: rgba(200,151,26,.14);
+}
+
+/* Active board — golden wand-glow pulse */
+.theme-hogwarts .local-board.active-board {
+  outline-color: #c8971a;
+  animation: hp-board-pulse 2s ease-in-out infinite;
+}
+@keyframes hp-board-pulse {
+  0%,100% { outline-color: #c8971a;  box-shadow: 0 0 10px rgba(200,151,26,.35); }
+  50%      { outline-color: #ffcc44; box-shadow: 0 0 24px rgba(255,204,68,.65); }
+}
+
+/* ══════════════════════════════════════
+   WON OVERLAY
+══════════════════════════════════════ */
+.theme-hogwarts .local-board-won-overlay { background: rgba(6,4,14,.82); }
+.theme-hogwarts .local-board-won-overlay.player-x {
+  color: #c8971a;
+  text-shadow: 0 0 28px rgba(200,151,26,.95), 0 0 55px rgba(200,151,26,.55);
+}
+.theme-hogwarts .local-board-won-overlay.player-o {
+  color: #e05050;
+  text-shadow: 0 0 28px rgba(192,57,43,.95), 0 0 55px rgba(192,57,43,.55);
+}
+
+/* ══════════════════════════════════════
+   WIN LINE — gold sparkle
+══════════════════════════════════════ */
+.theme-hogwarts .win-line-svg line {
+  stroke: #c8971a !important;
+  filter: drop-shadow(0 0 6px rgba(200,151,26,.85));
+}
+
+/* ══════════════════════════════════════
+   HINT CELLS
+══════════════════════════════════════ */
+.theme-hogwarts .classic-cell.hint-cell {
+  outline-color: #c8971a !important;
+  background: rgba(200,151,26,.22) !important;
+}
+.theme-hogwarts .ult-hint-cell {
+  outline-color: #c8971a !important;
+  background: rgba(200,151,26,.22) !important;
+}
+
+/* ══════════════════════════════════════
+   TIMER
+══════════════════════════════════════ */
+.theme-hogwarts .timer-ring        { border-color: #c8971a; color: #f5e6c8; }
+.theme-hogwarts .timer-ring.urgent { border-color: #c0392b; color: #e08070; }
+
+/* ══════════════════════════════════════
+   STATS GRAPH
+══════════════════════════════════════ */
+.theme-hogwarts .stats-graph {
+  background: rgba(200,151,26,.04);
+  border-color: rgba(200,151,26,.22);
+}
+
+/* ══════════════════════════════════════
+   SETTINGS — theme row
+══════════════════════════════════════ */
+.theme-hogwarts .theme-row-active {
+  border-color: rgba(200,151,26,.58);
+  background: rgba(200,151,26,.12);
+  box-shadow: 0 0 16px rgba(200,151,26,.22);
+}
+
+/* ══════════════════════════════════════
+   TUTORIAL
+══════════════════════════════════════ */
+.theme-hogwarts .tut-progress-fill {
+  background: linear-gradient(90deg, #7a4e06, #c8971a, #ffcc44);
+}
+.theme-hogwarts .tut-instruction-box { border-left-color: #c8971a; }
+
+/* ══════════════════════════════════════
+   REPLAY BOARD
+══════════════════════════════════════ */
+.theme-hogwarts .replay-board {
+  background: color-mix(in srgb, #c8971a calc(var(--grid-line-opacity) * 100%), #08050c);
+  border-color: color-mix(in srgb, #c8971a calc(var(--grid-line-opacity) * 100%), #08050c);
+}
+
+/* ══════════════════════════════════════
+   GAME SELECT SCREEN
+   Classic → Gryffindor (gold/crimson)
+   Ultimate → Slytherin (emerald/silver)
+══════════════════════════════════════ */
+.theme-hogwarts .gsel-title {
+  background: linear-gradient(120deg, #c8971a, #ffcc44, #c0392b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.theme-hogwarts .gsel-sub { color: rgba(245,230,200,.42); }
+
+.theme-hogwarts .gsel-classic .gsel-card-bg {
+  background: linear-gradient(145deg, rgba(22,8,4,.90) 0%, rgba(48,18,8,.88) 100%);
+  border: 1px solid rgba(200,151,26,.42);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.theme-hogwarts .gsel-classic .gsel-card-glow  { background: #c8971a; }
+.theme-hogwarts .gsel-classic .gsel-icon       { color: #c8971a; text-shadow: 0 0 18px rgba(200,151,26,.75); }
+.theme-hogwarts .gsel-classic .gsel-name       { color: #f5e6c8; }
+.theme-hogwarts .gsel-classic .gsel-tagline    { color: rgba(200,151,26,.78); }
+.theme-hogwarts .gsel-classic .gsel-chevron    { color: #c8971a; }
+.theme-hogwarts .gsel-classic .gsel-stripe     { background: linear-gradient(90deg, #7a4e06, #c8971a, #c0392b); }
+.theme-hogwarts .gsel-classic:hover            {
+  box-shadow: 0 14px 44px rgba(200,151,26,.32), 0 0 0 1px rgba(200,151,26,.22);
+}
+
+.theme-hogwarts .gsel-ultimate .gsel-card-bg {
+  background: linear-gradient(145deg, rgba(4,16,6,.90) 0%, rgba(8,28,12,.88) 100%);
+  border: 1px solid rgba(45,140,45,.42);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.theme-hogwarts .gsel-ultimate .gsel-card-glow   { background: #2d7830; }
+.theme-hogwarts .gsel-ultimate .gsel-icon-ult    { color: #5cb85c; text-shadow: 0 0 18px rgba(45,140,45,.75); }
+.theme-hogwarts .gsel-ultimate .gsel-name        { color: #d0f0d0; }
+.theme-hogwarts .gsel-ultimate .gsel-tagline     { color: rgba(92,184,92,.78); }
+.theme-hogwarts .gsel-ultimate .gsel-chevron     { color: #5cb85c; }
+.theme-hogwarts .gsel-ultimate .gsel-stripe      { background: linear-gradient(90deg, #1a5a1a, #5cb85c, #aad5aa); }
+.theme-hogwarts .gsel-ultimate:hover             {
+  box-shadow: 0 14px 44px rgba(45,140,45,.28), 0 0 0 1px rgba(45,140,45,.2);
+}
+
+/* ══════════════════════════════════════
+   ABOUT SCREEN
+══════════════════════════════════════ */
+.theme-hogwarts .about-logo      { color: #c8971a; text-shadow: 0 0 18px rgba(200,151,26,.58); }
+.theme-hogwarts .about-logo span { color: #c0392b; text-shadow: 0 0 18px rgba(192,57,43,.52); }
+.theme-hogwarts .about-tag {
+  background: rgba(200,151,26,.14);
+  border-color: rgba(200,151,26,.30);
+  color: #c8971a;
+}
+.theme-hogwarts .about-val     { color: #f5e6c8; }
+.theme-hogwarts .about-val-sub { color: rgba(245,230,200,.62); }
+
+/* ══════════════════════════════════════
+   SPLASH SCREEN
+   Dark nebula with strong overlay so
+   text is always readable on mobile
+══════════════════════════════════════ */
+.theme-hogwarts .screen-splash {
+  background-color: #05030d !important;
+  background-image:
+    linear-gradient(180deg, rgba(4,2,12,.62) 0%, rgba(8,5,20,.52) 50%, rgba(4,2,10,.68) 100%),
+    url('https://images.unsplash.com/photo-1534796636912-3b584831f999?w=600&q=70&auto=format&fit=crop&crop=entropy')
+    !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+.theme-hogwarts .splash-logo {
+  color: #f5e6c8;
+  text-shadow: 0 0 30px rgba(200,151,26,.85), 0 0 70px rgba(200,151,26,.42);
+}
+.theme-hogwarts .splash-logo span {
+  color: #c8971a;
+  text-shadow: 0 0 30px rgba(200,151,26,.95), 0 0 70px rgba(200,151,26,.55);
+}
+.theme-hogwarts .splash-progress-bar > div {
+  background: linear-gradient(90deg, #7a4e06, #c8971a, #ffdd88, #c8971a);
+  background-size: 200% 100%;
+  animation: hp-gold-flow 3s ease infinite;
+}
+.theme-hogwarts .splash-continue {
+  color: #c8971a;
+  text-shadow: 0 0 12px rgba(200,151,26,.65);
+}
+
+/* ══════════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════════ */
+.theme-hogwarts .screen-card::-webkit-scrollbar-thumb {
+  background: rgba(200,151,26,.38);
+}
+
+/* ══════════════════════════════════════
+   MOBILE — reduce backdrop-filter on
+   low-end devices for performance
+══════════════════════════════════════ */
+@media (max-width: 479px) {
+  .theme-hogwarts .game-scores,
+  .theme-hogwarts .turn-indicator,
+  .theme-hogwarts .setup-form {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  /* Lighter overlay on small screens — background still visible */
+  .theme-hogwarts .screen {
+    background: linear-gradient(
+      180deg,
+      rgba(8,5,18,.60) 0%,
+      rgba(12,7,24,.50) 45%,
+      rgba(8,5,14,.65) 100%
+    );
+  }
+}
+
+/* ══════════════════════════════════════
+   REDUCED MOTION
+══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .theme-hogwarts::before,
+  .theme-hogwarts .logo,
+  .theme-hogwarts .btn-primary,
+  .theme-hogwarts .splash-progress-bar > div,
+  .theme-hogwarts .local-board.active-board {
+    animation: none !important;
+  }
+}
+
+/* ══════════════════════════════════════
+   NO-ANIMATIONS CLASS
+══════════════════════════════════════ */
+.no-animations.theme-hogwarts::before,
+.no-animations.theme-hogwarts .logo,
+.no-animations.theme-hogwarts .btn-primary,
+.no-animations.theme-hogwarts .local-board.active-board {
+  animation: none !important;
+}
