@@ -8,7 +8,9 @@ const COIN_REWARDS = {
   easy: 10,
   medium: 15,
   hard: 25,
+  expert: 35,
   impossible: 50,
+  adaptive: 20, // Dynamic reward for adaptive AI
   hvh: 10,
 };
 
@@ -59,6 +61,21 @@ function record(result) {
     .sort((a,b) => b[1] - a[1])[0]?.[0] || modeKey;
 
   stats.totalDuration += result.duration || 0;
+
+  // Track adaptive AI usage
+  if (result.vsAI && result.difficulty === 'adaptive') {
+    stats.adaptiveGamesPlayed = (stats.adaptiveGamesPlayed || 0) + 1;
+  }
+
+  // Sync adaptive rating from playerModel (if available)
+  try {
+    const playerProfile = Storage.get('playerProfile');
+    if (playerProfile) {
+      stats.adaptiveRating = playerProfile.overallRating || 1000;
+    }
+  } catch (e) {
+    // PlayerModel not available yet
+  }
 
   // Keep last 50 games in history
   stats.history.unshift({

@@ -1,6 +1,3 @@
-/**
- * classic.js — Classic 3×3 Tic-Tac-Toe game logic and DOM management.
- */
 import { AI } from './ai.js';
 import { Hint, HintExhaustedError } from './hint.js';
 import { Timer } from './timer.js';
@@ -10,6 +7,9 @@ import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
 import { showDialog, showToast, navigate, navigateClean, updateTurnGlow } from './main.js';
+import { getDifficultyController } from './difficultyController.js';
+import { getPlayerModel } from './playerModel.js';
+import { startGameAnalysis, getMatchHistory } from './moveAnalysis.js';
 
 export const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -44,6 +44,8 @@ function defaultState() {
     matchOver: false,
     perfectGameCandidate: true, // true until opponent scores
     opponentScoredThisMatch: false,
+    gameAnalysis: null, // Move-by-move analysis
+    lastMoveTime: Date.now(), // For tracking decision time
   };
 }
 
@@ -102,6 +104,20 @@ function init(config) {
   clearWinLine();
 
   dom.replayBtn.disabled = true;
+
+  // Initialize game analysis for AI games (TEMPORARILY DISABLED)
+  if (state.vsAI) {
+    try {
+      const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
+      state.gameAnalysis = startGameAnalysis('classic', state.players, true, state.difficulty, humanPlayer, state.aiPlayer);
+      console.log('[Classic] Game analysis initialized');
+    } catch (e) {
+      console.warn('[Classic] Game analysis initialization failed:', e);
+      state.gameAnalysis = null;
+    }
+  }
+  
+  state.lastMoveTime = Date.now();
 
   if (state.timerEnabled) {
     dom.timerDisplay.style.display = '';
@@ -167,9 +183,19 @@ function handleCellClick(idx) {
 }
 
 function placeMove(idx, player) {
+  // Record move analysis for human players in AI games
+  // DISABLED: Waiting for AI.analyzeMoveQuality implementation
+  // if (state.vsAI && state.gameAnalysis && player !== state.aiPlayer) {
+  //   const timeSpent = Date.now() - state.lastMoveTime;
+  //   const boardBeforeMove = [...state.board];
+  //   state.gameAnalysis.recordMove(boardBeforeMove, idx, player, timeSpent);
+  // }
+  
+  state.lastMoveTime = Date.now();
   state.board[idx] = player;
   state.moveHistory.push({ player, index: idx, timestamp: Date.now() - state.roundStartTime });
   state.undoAvailable = true;
+  state.lastMoveTime = Date.now();
 
   const cell = dom.cells[idx];
   cell.textContent = player;
@@ -306,6 +332,51 @@ function endMatch() {
   const perfectGame = matchWinner !== 'draw' &&
     ((matchWinner === 'X' && oWins === 0) || (matchWinner === 'O' && xWins === 0));
 
+  // Finalize game analysis and update player model
+  let ratingChange = null;
+  let gameSummary = null;
+  
+  if (state.vsAI) {
+    try {
+      const playerModel = getPlayerModel();
+      const controller = getDifficultyController();
+      
+      // Finalize move analysis if enabled (currently disabled)
+      if (state.gameAnalysis && state.gameAnalysis.moves && state.gameAnalysis.moves.length > 0) {
+        try {
+          gameSummary = state.gameAnalysis.finalizeGame(matchWinner);
+          ratingChange = gameSummary.ratingUpdate;
+          
+          // Save to match history
+          const matchHistory = getMatchHistory();
+          matchHistory.saveGame(state.gameAnalysis.getGameData());
+          
+          console.log('[Classic] Game finalized with analysis:', gameSummary);
+        } catch (analysisError) {
+          console.warn('[Classic] Analysis finalization failed:', analysisError);
+          // Fall through to simple rating update
+        }
+      }
+      
+      // Simple rating update (used when analysis unavailable or failed)
+      if (!ratingChange) {
+        const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
+        let result;
+        if (matchWinner === humanPlayer) result = 'win';
+        else if (matchWinner === 'draw') result = 'draw';
+        else result = 'loss';
+        
+        const opponentStrength = estimateAIStrength(state.difficulty);
+        ratingChange = playerModel.updateRating('classic', result, opponentStrength, 0.5);
+        playerModel.incrementGameCount('classic');
+      }
+      
+      controller.recordGameComplete();
+    } catch (error) {
+      console.warn('[Classic] Error updating player model:', error);
+    }
+  }
+
   // Persist statistics
   const statsResult = {
     mode: 'classic',
@@ -335,6 +406,29 @@ function endMatch() {
   updateCoinDisplay();
 
   const coinMsg = coinsEarned > 0 ? `\n+${coinsEarned} 🪙 coins earned!` : '';
+  
+  // Add rating change message for adaptive AI
+  let ratingMsg = '';
+  if (ratingChange) {
+    const sign = ratingChange.ratingChange >= 0 ? '+' : '';
+    ratingMsg = `\n📊 Rating: ${ratingChange.ratingBefore} → ${ratingChange.ratingAfter} (${sign}${ratingChange.ratingChange})`;
+  }
+
+  // Add move quality summary for AI games  
+  let qualityMsg = '';
+  if (gameSummary && gameSummary.qualityCounts) {
+    const qc = gameSummary.qualityCounts;
+    const excellent = qc.excellent || 0;
+    const good = qc.good || 0;
+    const mistakes = qc.mistake || 0;
+    const blunders = qc.blunder || 0;
+    
+    qualityMsg = `\n\n📈 Move Quality:`;
+    if (excellent > 0) qualityMsg += ` ✨${excellent} excellent`;
+    if (good > 0) qualityMsg += ` ✓${good} good`;
+    if (mistakes > 0) qualityMsg += ` ⚠${mistakes} mistakes`;
+    if (blunders > 0) qualityMsg += ` ❌${blunders} blunders`;
+  }
 
   // Confetti on win
   if (matchWinner !== 'draw') spawnConfetti();
@@ -342,13 +436,21 @@ function endMatch() {
   // Build a rich result message
   const scoreMsg = `${state.players.X}: ${xWins}  ·  Draws: ${state.scores.draw}  ·  ${state.players.O}: ${oWins}`;
   const durationMsg = `⏱ ${Math.floor(duration / 60)}m ${duration % 60}s`;
-  const dialogMsg = `${resultText}${coinMsg}\n\n${scoreMsg}\n${durationMsg}`;
+  
+  const dialogMsg = `${resultText}${coinMsg}${ratingMsg}\n\n${scoreMsg}\n${durationMsg}${qualityMsg}`;
 
-  showDialog('Match Over', dialogMsg, [
+  const dialogButtons = [
     { label: '🔄 Rematch', action: () => restartMatch() },
     { label: '🏠 Menu', action: () => navigateClean('gameSelectScreen') },
     { label: '▶ Replay', action: () => openReplay() },
-  ]);
+  ];
+  
+  // Add Review button if analysis is available
+  if (gameSummary) {
+    dialogButtons.splice(2, 0, { label: '📊 Review', action: () => showGameReview(gameSummary) });
+  }
+
+  showDialog('Match Over', dialogMsg, dialogButtons);
 }
 
 function updateCoinDisplay() {
@@ -369,7 +471,23 @@ function scheduleAIMove() {
   setTimeout(() => {
     if (state.gameOver || state.matchOver) { dom.aiThinking.style.display = 'none'; return; }
     dom.aiThinking.style.display = 'none';
-    const move = AI.getBestMove([...state.board], state.difficulty, state.aiPlayer);
+    
+    // Use adaptive difficulty if difficulty is 'adaptive'
+    let move;
+    if (state.difficulty === 'adaptive') {
+      try {
+        const controller = getDifficultyController();
+        const adaptiveProfile = controller.getAdaptiveProfile('classic');
+        move = AI.getBestMove([...state.board], state.difficulty, state.aiPlayer, adaptiveProfile);
+        console.log('[Classic] Using adaptive profile:', adaptiveProfile);
+      } catch (error) {
+        console.warn('[Classic] Adaptive difficulty failed, using medium:', error);
+        move = AI.getBestMove([...state.board], 'medium', state.aiPlayer);
+      }
+    } else {
+      move = AI.getBestMove([...state.board], state.difficulty, state.aiPlayer);
+    }
+    
     if (move !== null) placeMove(move, state.aiPlayer);
   }, delay);
 }
@@ -378,6 +496,7 @@ function scheduleAIMove() {
 function switchTurn() {
   state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
   state.undoAvailable = false;
+  state.lastMoveTime = Date.now();
   updateTurnIndicator();
   updateActionButtons();
 
@@ -549,6 +668,59 @@ export function wireClassicEvents() {
       navigateClean('gameSelectScreen');
     }
   });
+}
+
+/**
+ * Show detailed game review with move analysis
+ */
+function showGameReview(gameSummary) {
+  const { qualityCounts, tacticalStats, moveCount, ratingUpdate } = gameSummary;
+  
+  let reviewMsg = `📊 Performance Analysis\n\n`;
+  
+  // Move Quality
+  reviewMsg += `Move Quality (${moveCount} moves):\n`;
+  if (qualityCounts.excellent) reviewMsg += `✨ Excellent: ${qualityCounts.excellent}\n`;
+  if (qualityCounts.good) reviewMsg += `✓ Good: ${qualityCounts.good}\n`;
+  if (qualityCounts.acceptable) reviewMsg += `○ Acceptable: ${qualityCounts.acceptable}\n`;
+  if (qualityCounts.inaccurate) reviewMsg += `≈ Inaccurate: ${qualityCounts.inaccurate}\n`;
+  if (qualityCounts.mistake) reviewMsg += `⚠ Mistakes: ${qualityCounts.mistake}\n`;
+  if (qualityCounts.blunder) reviewMsg += `❌ Blunders: ${qualityCounts.blunder}\n`;
+  
+  // Tactical Performance
+  if (tacticalStats) {
+    reviewMsg += `\nTactical Performance:\n`;
+    if (tacticalStats.threatsCreated) reviewMsg += `⚔️ Threats created: ${tacticalStats.threatsCreated}\n`;
+    if (tacticalStats.threatsBlocked) reviewMsg += `🛡️ Threats blocked: ${tacticalStats.threatsBlocked}\n`;
+    if (tacticalStats.threatsMissed) reviewMsg += `❗ Threats missed: ${tacticalStats.threatsMissed}\n`;
+  }
+  
+  // Rating Change
+  if (ratingUpdate) {
+    const sign = ratingUpdate.ratingChange >= 0 ? '+' : '';
+    reviewMsg += `\n📈 Rating Change:\n`;
+    reviewMsg += `${ratingUpdate.ratingBefore} → ${ratingUpdate.ratingAfter} (${sign}${ratingUpdate.ratingChange})`;
+  }
+  
+  showDialog('Game Review', reviewMsg, [
+    { label: '✓ Got it', action: null }
+  ]);
+}
+
+/**
+ * Estimate AI strength rating based on difficulty level
+ */
+function estimateAIStrength(difficulty) {
+  const strengthMap = {
+    'beginner': 600,
+    'easy': 900,
+    'medium': 1200,
+    'hard': 1500,
+    'expert': 1800,
+    'impossible': 2200,
+    'adaptive': 1200, // Default for adaptive (will be adjusted)
+  };
+  return strengthMap[difficulty] || 1200;
 }
 
 export const Classic = { init, checkWinner, handleCellClick, undo, requestHint, restart };

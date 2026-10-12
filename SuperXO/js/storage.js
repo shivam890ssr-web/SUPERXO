@@ -52,6 +52,8 @@ const DEFAULTS = {
     history: [],
   },
   achievements: {},
+  playerProfile: null,  // Adaptive AI player profile
+  matchHistory: [],     // Detailed match history with move analysis
 };
 
 /**

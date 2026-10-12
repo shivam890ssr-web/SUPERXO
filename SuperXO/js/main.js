@@ -2,6 +2,9 @@
  * main.js — SPA router, bootstrap, and global utilities.
  * Imported by all other modules for navigation and dialog helpers.
  */
+
+console.log('[SuperXO] main.js loading...');
+
 import { Storage } from './storage.js';
 import { Theme } from './theme.js';
 import { Settings } from './settings.js';
@@ -14,6 +17,8 @@ import { Replay } from './replay.js';
 import { wireTutorialScreenEvents } from './tutorial.js';
 import { Music } from './music.js';
 import { ThemeMusic } from './themeMusic.js';
+
+console.log('[SuperXO] All imports loaded successfully');
 
 const APP_VERSION = '1.0.0';
 
@@ -91,6 +96,9 @@ function onScreenEnter(screenId) {
     case 'statisticsScreen':
       renderStatisticsScreen();
       break;
+    case 'adaptiveAnalyticsScreen':
+      renderAdaptiveAnalytics('overall');
+      break;
     case 'achievementsScreen':
       renderAchievementsScreen();
       break;
@@ -106,61 +114,74 @@ function onScreenEnter(screenId) {
 
 // ── Init ───────────────────────────────────────────────
 function initApp() {
-  // Apply theme CSS vars and settings immediately (no audio — just visual)
-  Theme.apply(Theme.getCurrent());
-  Settings.applyAll();
-  applyBoardCustom();
+  console.log('[SuperXO] Initializing app...');
+  
+  try {
+    // Apply theme CSS vars and settings immediately (no audio — just visual)
+    Theme.apply(Theme.getCurrent());
+    Settings.applyAll();
+    applyBoardCustom();
+    console.log('[SuperXO] Theme and settings applied');
 
-  // Initialise BGM (restores custom track from IndexedDB)
-  Music.init().then(() => {
-    refreshBgmUI();
-    const musicEnabled = Settings.get('music');
-    Music.setEnabled(musicEnabled !== false);
-    ThemeMusic.setEnabled(musicEnabled !== false);
-    // Theme music requires a prior user gesture — start AFTER first interaction
-    // (handled in showSplash / skipSplash below via _startThemeMusicAfterGesture)
-  });
+    // Initialise BGM (restores custom track from IndexedDB)
+    Music.init().then(() => {
+      refreshBgmUI();
+      const musicEnabled = Settings.get('music');
+      Music.setEnabled(musicEnabled !== false);
+      ThemeMusic.setEnabled(musicEnabled !== false);
+      console.log('[SuperXO] Music initialized');
+    }).catch(err => {
+      console.warn('[SuperXO] Music init failed:', err);
+    });
 
-  // Migrate: ensure Classic + Neon are always unlocked (free themes)
-  Theme.unlock('classic');
-  Theme.unlock('neon');
+    // Migrate: ensure Classic + Neon are always unlocked (free themes)
+    Theme.unlock('classic');
+    Theme.unlock('neon');
 
-  // Music state-change → keep Settings UI in sync
-  Music.onStateChange(() => refreshBgmUI());
+    // Music state-change → keep Settings UI in sync
+    Music.onStateChange(() => refreshBgmUI());
 
-  // Set version strings
-  document.querySelectorAll('.splash-version, #settingsVersion, #aboutVersion').forEach(el => {
-    el.textContent = el.id === 'settingsVersion' ? `Version ${APP_VERSION}` : APP_VERSION;
-  });
-  const aboutVer = document.getElementById('aboutVersion');
-  if (aboutVer) aboutVer.textContent = `Version ${APP_VERSION}`;
-  const settingsVer = document.getElementById('settingsVersion');
-  if (settingsVer) settingsVer.textContent = `Version ${APP_VERSION}`;
-  const splashVer = document.getElementById('splashVersion');
-  if (splashVer) splashVer.textContent = `v${APP_VERSION}`;
+    // Set version strings
+    document.querySelectorAll('.splash-version, #settingsVersion, #aboutVersion').forEach(el => {
+      el.textContent = el.id === 'settingsVersion' ? `Version ${APP_VERSION}` : APP_VERSION;
+    });
+    const aboutVer = document.getElementById('aboutVersion');
+    if (aboutVer) aboutVer.textContent = `Version ${APP_VERSION}`;
+    const settingsVer = document.getElementById('settingsVersion');
+    if (settingsVer) settingsVer.textContent = `Version ${APP_VERSION}`;
+    const splashVer = document.getElementById('splashVersion');
+    if (splashVer) splashVer.textContent = `v${APP_VERSION}`;
 
-  // Splash logic
-  const splashSeen = Storage.get('splashSeen');
-  if (splashSeen) {
-    skipSplash();
-  } else {
-    showSplash();
-  }
+    // Splash logic
+    const splashSeen = Storage.get('splashSeen');
+    if (splashSeen) {
+      skipSplash();
+    } else {
+      showSplash();
+    }
 
-  // Wire all events
-  wireNavEvents();
-  wireHomeEvents();
-  wireSetupEvents();
-  wireClassicEvents();
-  wireUltimateEvents();
-  wireSettingsEvents();
-  wireReplayEvents();
-  wireTutorialScreenEvents();
-  wireBackButtons();
+    // Wire all events
+    wireNavEvents();
+    wireHomeEvents();
+    wireSetupEvents();
+    wireClassicEvents();
+    wireUltimateEvents();
+    wireSettingsEvents();
+    wireReplayEvents();
+    wireTutorialScreenEvents();
+    wireBackButtons();
+    
+    console.log('[SuperXO] All events wired successfully');
 
-  // Register service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {/* offline support best-effort */});
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {/* offline support best-effort */});
+    }
+    
+    console.log('[SuperXO] Initialization complete');
+  } catch (error) {
+    console.error('[SuperXO] CRITICAL ERROR during initialization:', error);
+    alert('Failed to load game. Please refresh the page. Error: ' + error.message);
   }
 }
 
@@ -173,14 +194,14 @@ function showSplash() {
 
   let value = 0;
   const interval = setInterval(() => {
-    value = Math.min(value + 2, 100);
+    value = Math.min(value + 10, 100);
     progress.style.width = value + '%';
     if (value >= 100) {
       clearInterval(interval);
       loadingText.style.display = 'none';
       continueText.style.display = 'block';
     }
-  }, 100);
+  }, 30); // 3 seconds total (100 / 10 * 30ms = 3000ms)
 
   const proceed = () => {
     if (value >= 100) {
@@ -261,6 +282,14 @@ function wireSetupEvents() {
       const isAI = btn.dataset.mode === 'hvai';
       document.getElementById('p2NameRow').style.display = isAI ? 'none' : '';
       document.getElementById('difficultyRow').style.display = isAI ? '' : 'none';
+      const ratingRow = document.getElementById('ratingDisplayRow');
+      if (ratingRow) ratingRow.style.display = isAI ? '' : 'none';
+      
+      // Update rating display
+      if (isAI) {
+        updateClassicRatingDisplay();
+      }
+      
       Sound.play('click');
     });
   });
@@ -301,6 +330,14 @@ function wireSetupEvents() {
       const isAI = btn.dataset.umode === 'hvai';
       document.getElementById('up2NameRow').style.display = isAI ? 'none' : '';
       document.getElementById('uDifficultyRow').style.display = isAI ? '' : 'none';
+      const ratingRow = document.getElementById('uRatingDisplayRow');
+      if (ratingRow) ratingRow.style.display = isAI ? '' : 'none';
+      
+      // Update rating display
+      if (isAI) {
+        updateUltimateRatingDisplay();
+      }
+      
       Sound.play('click');
     });
   });
@@ -488,6 +525,22 @@ function wireSettingsEvents() {
       },
       { label: 'Cancel', action: null },
     ]);
+  });
+
+  // Adaptive AI Analytics button
+  document.getElementById('openAdaptiveAnalyticsBtn')?.addEventListener('click', () => {
+    navigate('adaptiveAnalyticsScreen');
+  });
+
+  // Analytics mode selector
+  document.querySelectorAll('.analytics-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.analytics-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.analyticsMode;
+      renderAdaptiveAnalytics(mode);
+      Sound.play('click');
+    });
   });
 
   // ── BGM: file picker ──
@@ -839,6 +892,361 @@ function formatDuration(sec) {
   return `${Math.floor(sec/60)}m ${sec%60}s`;
 }
 
+// ── Adaptive Analytics Dashboard ──────────────────────
+async function renderAdaptiveAnalytics(mode = 'overall') {
+  try {
+    // Dynamically import playerModel
+    const { getPlayerModel } = await import('./playerModel.js');
+    const { getDifficultyController } = await import('./difficultyController.js');
+    
+    const playerModel = getPlayerModel();
+    const profile = playerModel.getProfile();
+    const controller = getDifficultyController();
+    
+    // Get rating based on mode
+    let rating, gamesPlayed, skillBand;
+    if (mode === 'classic') {
+      rating = profile.classicRating;
+      gamesPlayed = profile.classicGames;
+      skillBand = playerModel.getSkillBand('classic');
+    } else if (mode === 'ultimate') {
+      rating = profile.ultimateRating;
+      gamesPlayed = profile.ultimateGames;
+      skillBand = playerModel.getSkillBand('ultimate');
+    } else {
+      rating = profile.overallRating;
+      gamesPlayed = profile.totalGames;
+      skillBand = playerModel.getSkillBand('overall');
+    }
+    
+    // Performance Overview
+    document.getElementById('analyticsRating').textContent = Math.round(rating);
+    document.getElementById('analyticsSkillBand').textContent = skillBand.label;
+    document.getElementById('analyticsSkillBand').style.color = skillBand.color;
+    document.getElementById('analyticsGamesPlayed').textContent = gamesPlayed;
+    
+    // Calculate W/L/D from recent games
+    const recentGames = profile.recentGames.filter(g => 
+      mode === 'overall' || g.mode === mode
+    );
+    const wins = recentGames.filter(g => g.result === 'win').length;
+    const losses = recentGames.filter(g => g.result === 'loss').length;
+    const draws = recentGames.filter(g => g.result === 'draw').length;
+    document.getElementById('analyticsGamesBreakdown').textContent = `${wins} W / ${losses} L / ${draws} D`;
+    
+    // Win rate
+    const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
+    document.getElementById('analyticsWinRate').textContent = gamesPlayed > 0 ? `${winRate}%` : '—';
+    
+    // Recent form
+    const formEmoji = {
+      improving: '📈 Improving',
+      stable: '➡️ Stable',
+      declining: '📉 Declining'
+    };
+    document.getElementById('analyticsRecentForm').textContent = formEmoji[profile.recentForm] || 'Stable';
+    
+    // Rating change (last 10 games)
+    if (recentGames.length >= 2) {
+      const totalChange = recentGames.slice(0, 10).reduce((sum, g) => sum + g.ratingChange, 0);
+      const sign = totalChange >= 0 ? '+' : '';
+      document.getElementById('analyticsRatingChange').textContent = `${sign}${totalChange}`;
+      document.getElementById('analyticsRatingChange').style.color = totalChange >= 0 ? '#44dd44' : '#ff5555';
+    } else {
+      document.getElementById('analyticsRatingChange').textContent = '—';
+    }
+    
+    // Render Rating Chart
+    renderRatingChart(recentGames, skillBand);
+    
+    // Move Quality Analysis
+    renderMoveQuality(profile.moveQuality);
+    
+    // Tactical Performance
+    renderTacticalStats(profile.tactical);
+    
+    // Strengths & Weaknesses
+    renderStrengthsWeaknesses(profile.strengths, profile.weaknesses);
+    
+    // Recent Matches
+    renderAnalyticsMatches(recentGames);
+    
+    // AI Adaptation Info
+    renderAIAdaptation(profile, controller, mode);
+    
+  } catch (error) {
+    console.warn('[Analytics] Error rendering:', error);
+    // Show empty state
+    document.getElementById('analyticsRating').textContent = '1000';
+    document.getElementById('analyticsSkillBand').textContent = 'Intermediate';
+    document.getElementById('analyticsGamesPlayed').textContent = '0';
+  }
+}
+
+function renderRatingChart(recentGames, skillBand) {
+  const canvas = document.getElementById('ratingChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth || 400;
+  const H = canvas.height = 250;
+  ctx.clearRect(0, 0, W, H);
+  
+  if (recentGames.length < 2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '14px Poppins, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Play more games to see rating progression', W / 2, H / 2);
+    return;
+  }
+  
+  // Prepare data (reverse to show oldest first)
+  const games = [...recentGames].reverse();
+  const ratings = games.map(g => g.ratingAfter);
+  
+  // Find min/max for scaling with padding
+  const minRating = Math.min(...ratings) - 50;
+  const maxRating = Math.max(...ratings) + 50;
+  const ratingRange = maxRating - minRating;
+  
+  // Drawing margins
+  const marginLeft = 50;
+  const marginRight = 20;
+  const marginTop = 20;
+  const marginBottom = 40;
+  const plotWidth = W - marginLeft - marginRight;
+  const plotHeight = H - marginTop - marginBottom;
+  
+  // Scale functions
+  const scaleX = (index) => marginLeft + (index / (ratings.length - 1)) * plotWidth;
+  const scaleY = (rating) => marginTop + plotHeight - ((rating - minRating) / ratingRange) * plotHeight;
+  
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = marginTop + (i / 4) * plotHeight;
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, y);
+    ctx.lineTo(W - marginRight, y);
+    ctx.stroke();
+    
+    // Y-axis labels
+    const ratingAtY = maxRating - (i / 4) * ratingRange;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '11px Poppins, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(ratingAtY), marginLeft - 8, y + 4);
+  }
+  
+  // Draw skill band background
+  const bandColor = skillBand.color + '15';
+  ctx.fillStyle = bandColor;
+  ctx.fillRect(marginLeft, marginTop, plotWidth, plotHeight);
+  
+  // Draw rating line
+  ctx.strokeStyle = '#4a9eff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ratings.forEach((rating, i) => {
+    const x = scaleX(i);
+    const y = scaleY(rating);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  // Draw points
+  ratings.forEach((rating, i) => {
+    const x = scaleX(i);
+    const y = scaleY(rating);
+    ctx.fillStyle = '#2dd4ff';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  
+  // X-axis label
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '11px Poppins, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Last ${ratings.length} games`, W / 2, H - 10);
+}
+
+function renderMoveQuality(moveQuality) {
+  const container = document.getElementById('moveQualityBars');
+  if (!container) return;
+  
+  if (moveQuality.totalMoves === 0) {
+    container.innerHTML = '<div class="empty-state-sm">Play AI games to track move quality</div>';
+    return;
+  }
+  
+  const qualities = [
+    { key: 'excellent', label: '✨ Excellent', color: 'quality-excellent' },
+    { key: 'good', label: '✓ Good', color: 'quality-good' },
+    { key: 'acceptable', label: '○ Acceptable', color: 'quality-acceptable' },
+    { key: 'inaccurate', label: '≈ Inaccurate', color: 'quality-inaccurate' },
+    { key: 'mistake', label: '⚠ Mistake', color: 'quality-mistake' },
+    { key: 'blunder', label: '❌ Blunder', color: 'quality-blunder' },
+  ];
+  
+  container.innerHTML = '';
+  qualities.forEach(({ key, label, color }) => {
+    const count = moveQuality[key] || 0;
+    const percentage = (count / moveQuality.totalMoves) * 100;
+    
+    const row = document.createElement('div');
+    row.className = 'quality-bar-row';
+    row.innerHTML = `
+      <div class="quality-bar-label">${label}</div>
+      <div class="quality-bar-container">
+        <div class="quality-bar-fill ${color}" style="width: ${percentage}%">
+          ${count > 0 ? count : ''}
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function renderTacticalStats(tactical) {
+  const container = document.getElementById('tacticalStats');
+  if (!container) return;
+  
+  if (tactical.totalTacticalOpportunities === 0) {
+    container.innerHTML = '<div class="empty-state-sm">Tactical stats collected during gameplay</div>';
+    return;
+  }
+  
+  const stats = [
+    { label: 'Threats Created', value: tactical.threatsCreated },
+    { label: 'Threats Blocked', value: tactical.threatsBlocked },
+    { label: 'Threats Missed', value: tactical.threatsMissed },
+    { label: 'Forks Created', value: tactical.forksCreated },
+    { label: 'Forks Blocked', value: tactical.forksBlocked },
+    { label: 'Winning Moves Missed', value: tactical.winningMovesMissed },
+  ];
+  
+  container.innerHTML = '';
+  stats.forEach(({ label, value }) => {
+    const item = document.createElement('div');
+    item.className = 'tactical-stat-item';
+    item.innerHTML = `
+      <span class="tactical-stat-label">${label}</span>
+      <span class="tactical-stat-value">${value || 0}</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function renderStrengthsWeaknesses(strengths, weaknesses) {
+  const container = document.getElementById('strengthsWeaknesses');
+  if (!container) return;
+  
+  if ((!strengths || strengths.length === 0) && (!weaknesses || weaknesses.length === 0)) {
+    container.innerHTML = '<div class="empty-state-sm">Play more games to identify patterns</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  
+  strengths?.forEach(strength => {
+    const card = document.createElement('div');
+    card.className = 'strength-weakness-card strength';
+    card.innerHTML = `
+      <div class="strength-weakness-title">💪 Strength</div>
+      <div class="strength-weakness-text">${strength.description}</div>
+      <div class="strength-weakness-confidence">Confidence: ${Math.round(strength.confidence * 100)}%</div>
+    `;
+    container.appendChild(card);
+  });
+  
+  weaknesses?.forEach(weakness => {
+    const card = document.createElement('div');
+    card.className = 'strength-weakness-card weakness';
+    card.innerHTML = `
+      <div class="strength-weakness-title">⚠️ Weakness</div>
+      <div class="strength-weakness-text">${weakness.description}</div>
+      <div class="strength-weakness-confidence">Confidence: ${Math.round(weakness.confidence * 100)}%</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderAnalyticsMatches(recentGames) {
+  const container = document.getElementById('analyticsMatches');
+  if (!container) return;
+  
+  if (recentGames.length === 0) {
+    container.innerHTML = '<div class="empty-state-sm">No recent matches</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  recentGames.slice(0, 10).forEach(game => {
+    const item = document.createElement('div');
+    item.className = 'analytics-match-item';
+    
+    const resultClass = game.result === 'win' ? 'win' : game.result === 'loss' ? 'loss' : 'draw';
+    const resultIcon = game.result === 'win' ? '✅' : game.result === 'loss' ? '❌' : '🤝';
+    const modeIcon = game.mode === 'ultimate' ? '👑' : '🎮';
+    
+    const ratingChangeClass = game.ratingChange >= 0 ? 'positive' : 'negative';
+    const ratingChangeSign = game.ratingChange >= 0 ? '+' : '';
+    
+    const date = new Date(game.timestamp + (Date.now() - recentGames[0].timestamp));
+    const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    
+    item.innerHTML = `
+      <div class="analytics-match-result ${resultClass}">
+        ${resultIcon} ${game.result.charAt(0).toUpperCase() + game.result.slice(1)}
+      </div>
+      <div class="analytics-match-details">
+        ${modeIcon} ${game.mode} · ${dateStr}
+      </div>
+      <div class="analytics-match-rating ${ratingChangeClass}">
+        ${ratingChangeSign}${game.ratingChange}
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function renderAIAdaptation(profile, controller, mode) {
+  const container = document.getElementById('aiAdaptationInfo');
+  if (!container) return;
+  
+  if (profile.totalGames < 5) {
+    container.innerHTML = '<div class="empty-state-sm">AI will adapt as you play more games</div>';
+    return;
+  }
+  
+  const adaptiveProfile = controller.getAdaptiveProfile(mode);
+  const explanation = controller.getAdaptiveExplanation(mode);
+  
+  container.innerHTML = `
+    <div class="ai-adaptation-item">
+      <div class="ai-adaptation-label">Current AI Level</div>
+      <div class="ai-adaptation-value">${explanation.skillBand}</div>
+      <div class="ai-adaptation-reason">${explanation.adjustmentReason}</div>
+    </div>
+    <div class="ai-adaptation-item">
+      <div class="ai-adaptation-label">Search Depth</div>
+      <div class="ai-adaptation-value">${adaptiveProfile.searchDepth} ply</div>
+    </div>
+    <div class="ai-adaptation-item">
+      <div class="ai-adaptation-label">Tactical Awareness</div>
+      <div class="ai-adaptation-value">${Math.round(adaptiveProfile.tacticalAwareness * 100)}%</div>
+    </div>
+    <div class="ai-adaptation-item">
+      <div class="ai-adaptation-label">Recent Performance</div>
+      <div class="ai-adaptation-value">${explanation.recentForm}</div>
+      <div class="ai-adaptation-reason">${explanation.gamesPlayed} games played · ${explanation.confidence} confidence</div>
+    </div>
+  `;
+}
+
 // ── Achievements screen ───────────────────────────────
 function renderAchievementsScreen() {
   const achs = Achievements.getAll();
@@ -1025,5 +1433,47 @@ export function updateTurnGlow(elementId, player) {
       item.classList.toggle('active-player', isActive);
       item.classList.toggle('inactive-player', !isActive);
     });
+  }
+}
+
+
+// ── Rating Display Helpers ────────────────────────────
+function updateClassicRatingDisplay() {
+  const displayEl = document.getElementById('classicRatingDisplay');
+  if (!displayEl) return;
+  
+  try {
+    import('./playerModel.js').then(({ getPlayerModel }) => {
+      const playerModel = getPlayerModel();
+      const profile = playerModel.getProfile();
+      const skillBand = playerModel.getSkillBand('classic');
+      displayEl.textContent = `${Math.round(profile.classicRating)} (${skillBand.label})`;
+      displayEl.style.color = skillBand.color;
+    }).catch(e => {
+      console.warn('[Main] Failed to load rating:', e);
+      displayEl.textContent = '1000 (Intermediate)';
+    });
+  } catch (e) {
+    displayEl.textContent = '1000 (Intermediate)';
+  }
+}
+
+function updateUltimateRatingDisplay() {
+  const displayEl = document.getElementById('ultimateRatingDisplay');
+  if (!displayEl) return;
+  
+  try {
+    import('./playerModel.js').then(({ getPlayerModel }) => {
+      const playerModel = getPlayerModel();
+      const profile = playerModel.getProfile();
+      const skillBand = playerModel.getSkillBand('ultimate');
+      displayEl.textContent = `${Math.round(profile.ultimateRating)} (${skillBand.label})`;
+      displayEl.style.color = skillBand.color;
+    }).catch(e => {
+      console.warn('[Main] Failed to load rating:', e);
+      displayEl.textContent = '1000 (Intermediate)';
+    });
+  } catch (e) {
+    displayEl.textContent = '1000 (Intermediate)';
   }
 }

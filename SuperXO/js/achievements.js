@@ -85,6 +85,85 @@ const DEFINITIONS = [
     condition: (stats) => stats.played >= 50,
     progress: (stats) => Math.min(stats.played / 50, 1),
   },
+  // NEW ACHIEVEMENTS - Adaptive AI & Skill Progression
+  {
+    id: 'skill_climber',
+    name: 'Skill Climber',
+    description: 'Reach Intermediate skill level (1100+ rating)',
+    coinReward: 150,
+    icon: '📈',
+    condition: (stats) => (stats.adaptiveRating || 0) >= 1100,
+    progress: (stats) => Math.min((stats.adaptiveRating || 1000) / 1100, 1),
+  },
+  {
+    id: 'advanced_player',
+    name: 'Advanced Player',
+    description: 'Reach Advanced skill level (1400+ rating)',
+    coinReward: 300,
+    icon: '🎯',
+    condition: (stats) => (stats.adaptiveRating || 0) >= 1400,
+    progress: (stats) => Math.min((stats.adaptiveRating || 1000) / 1400, 1),
+  },
+  {
+    id: 'expert_status',
+    name: 'Expert Status',
+    description: 'Reach Expert skill level (1700+ rating)',
+    coinReward: 500,
+    icon: '🔥',
+    condition: (stats) => (stats.adaptiveRating || 0) >= 1700,
+    progress: (stats) => Math.min((stats.adaptiveRating || 1000) / 1700, 1),
+  },
+  {
+    id: 'master_mind',
+    name: 'Master Mind',
+    description: 'Reach Master skill level (2000+ rating)',
+    coinReward: 1000,
+    icon: '👑',
+    condition: (stats) => (stats.adaptiveRating || 0) >= 2000,
+    progress: (stats) => Math.min((stats.adaptiveRating || 1000) / 2000, 1),
+  },
+  {
+    id: 'win_streak_5',
+    name: 'Hot Streak',
+    description: 'Win 5 games in a row',
+    coinReward: 200,
+    icon: '🔥',
+    condition: (stats) => stats.bestStreak >= 5,
+    progress: (stats) => Math.min(stats.bestStreak / 5, 1),
+  },
+  {
+    id: 'ultimate_master',
+    name: 'Ultimate Master',
+    description: 'Win 10 Ultimate Tic-Tac-Toe games',
+    coinReward: 250,
+    icon: '👑',
+    condition: (stats) => {
+      const ultimateWins = (stats.modeCounts?.ultimate_ai || 0) + (stats.modeCounts?.ultimate_hvh || 0);
+      return ultimateWins >= 10;
+    },
+    progress: (stats) => {
+      const ultimateWins = (stats.modeCounts?.ultimate_ai || 0) + (stats.modeCounts?.ultimate_hvh || 0);
+      return Math.min(ultimateWins / 10, 1);
+    },
+  },
+  {
+    id: 'adaptive_veteran',
+    name: 'Adaptive Veteran',
+    description: 'Play 20 games with Adaptive AI',
+    coinReward: 300,
+    icon: '🧠',
+    condition: (stats) => (stats.adaptiveGamesPlayed || 0) >= 20,
+    progress: (stats) => Math.min((stats.adaptiveGamesPlayed || 0) / 20, 1),
+  },
+  {
+    id: 'comeback_king',
+    name: 'Comeback King',
+    description: 'Win after losing 2 games in a best-of-5 match',
+    coinReward: 250,
+    icon: '💪',
+    condition: (stats) => (stats.comebackWins || 0) >= 1,
+    progress: (stats) => Math.min((stats.comebackWins || 0), 1),
+  },
 ];
 
 const DEF_MAP = Object.fromEntries(DEFINITIONS.map(d => [d.id, d]));

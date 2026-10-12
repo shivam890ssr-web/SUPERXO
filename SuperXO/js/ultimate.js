@@ -10,6 +10,8 @@ import { Achievements } from './achievements.js';
 import { Sound } from './sound.js';
 import { Storage } from './storage.js';
 import { showDialog, showToast, navigate, navigateClean, updateTurnGlow } from './main.js';
+import { getDifficultyController } from './difficultyController.js';
+import { getPlayerModel } from './playerModel.js';
 
 const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -39,6 +41,8 @@ function defaultState() {
     timerEnabled: false,
     timerDuration: 30,
     hintsRemaining: 3,   // 3 hints per game
+    gameAnalysis: null,
+    lastMoveTime: Date.now(),
   };
 }
 
@@ -119,6 +123,19 @@ function init(config) {
   renderAll();
   dom.replayBtn.disabled = true;
   updateActionButtons();
+
+  // Initialize game analysis for AI games (TEMPORARILY DISABLED)
+  if (state.vsAI) {
+    try {
+      // state.gameAnalysis = startGameAnalysis('ultimate', state.players, true, state.difficulty);
+      state.gameAnalysis = null;
+    } catch (e) {
+      console.warn('Game analysis disabled:', e);
+      state.gameAnalysis = null;
+    }
+  }
+  
+  state.lastMoveTime = Date.now();
 
   if (state.timerEnabled) {
     if (dom.timerDisplay) dom.timerDisplay.style.display = '';
@@ -217,8 +234,22 @@ function isCellPlayable(boardIdx, cellIdx) {
 }
 
 function placeMove(boardIdx, cellIdx, player) {
+  // Record move analysis for human players in AI games
+  if (state.vsAI && state.gameAnalysis && player !== state.aiPlayer) {
+    const timeSpent = Date.now() - state.lastMoveTime;
+    const stateBeforeMove = {
+      boards: state.boards.map(b => [...b]),
+      boardWinners: [...state.boardWinners],
+      globalBoard: [...state.globalBoard],
+      activeBoard: state.activeBoard,
+    };
+    const move = { b: boardIdx, c: cellIdx };
+    state.gameAnalysis.recordMove(stateBeforeMove, move, player, timeSpent);
+  }
+  
   state.boards[boardIdx][cellIdx] = player;
   state.moveHistory.push({ player, localBoard: boardIdx, cell: cellIdx, timestamp: Date.now() - state.startTime });
+  state.lastMoveTime = Date.now();
   Sound.play('place');
 
   // Check local board win
@@ -305,6 +336,34 @@ function endGame(result) {
     result !== state.aiPlayer &&
     state.difficulty === 'impossible';
 
+  // Update player model for adaptive AI
+  let ratingChange = null;
+  if (state.vsAI) {
+    try {
+      const playerModel = getPlayerModel();
+      const controller = getDifficultyController();
+      
+      // Determine result from human player's perspective
+      const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
+      let gameResult;
+      if (result === humanPlayer) gameResult = 'win';
+      else if (result === 'draw') gameResult = 'draw';
+      else gameResult = 'loss';
+      
+      // Estimate opponent strength based on difficulty
+      const opponentStrength = estimateAIStrength(state.difficulty);
+      
+      // Update rating
+      ratingChange = playerModel.updateRating('ultimate', gameResult, opponentStrength, 0.5);
+      playerModel.incrementGameCount('ultimate');
+      controller.recordGameComplete();
+      
+      console.log('[Ultimate] Updated player rating:', ratingChange);
+    } catch (error) {
+      console.warn('[Ultimate] Error updating player model:', error);
+    }
+  }
+
   const statsResult = {
     mode: 'ultimate',
     winner: result,
@@ -329,9 +388,18 @@ function endGame(result) {
 
   const resultName = result === 'draw' ? '🤝 It\'s a Draw!' : `🏆 ${state.players[result]} wins!`;
   const coinMsg = coinsEarned > 0 ? `\n+${coinsEarned} 🪙 coins earned!` : '';
+  
+  // Add rating change message for adaptive AI
+  let ratingMsg = '';
+  if (ratingChange) {
+    const sign = ratingChange.ratingChange >= 0 ? '+' : '';
+    ratingMsg = `\n📊 Rating: ${ratingChange.ratingBefore} → ${ratingChange.ratingAfter} (${sign}${ratingChange.ratingChange})`;
+  }
+  
   const durationMsg = `⏱ ${Math.floor(duration / 60)}m ${duration % 60}s  ·  ${state.moveHistory.length} moves`;
+  
   if (result !== 'draw') spawnConfetti();
-  showDialog('Game Over', `${resultName}${coinMsg}\n\n${durationMsg}`, [
+  showDialog('Game Over', `${resultName}${coinMsg}${ratingMsg}\n\n${durationMsg}`, [
     { label: '🔄 Rematch', action: () => restartGame() },
     { label: '🏠 Menu', action: () => navigateClean('gameSelectScreen') },
     { label: '▶ Replay', action: () => openReplay() },
@@ -355,99 +423,65 @@ function scheduleAIMove() {
     if (state.gameOver) { dom.aiThinking.style.display = 'none'; return; }
     dom.aiThinking.style.display = 'none';
 
-    const move = getBestUltimateMove();
-    if (move) placeMove(move.b, move.c, state.aiPlayer);
+    let move;
+    if (state.difficulty === 'adaptive') {
+      try {
+        // Use adaptive difficulty controller
+        const controller = getDifficultyController();
+        const adaptiveProfile = controller.getAdaptiveProfile('ultimate');
+        const ultimateState = {
+          boards: state.boards,
+          boardWinners: state.boardWinners,
+          globalBoard: state.globalBoard,
+          activeBoard: state.activeBoard,
+        };
+        move = AI.getUltimateBestMove(ultimateState, state.aiPlayer, 'adaptive', adaptiveProfile);
+        console.log('[Ultimate] Using adaptive profile:', adaptiveProfile);
+      } catch (error) {
+        console.warn('[Ultimate] Adaptive difficulty failed, using medium:', error);
+        const ultimateState = {
+          boards: state.boards,
+          boardWinners: state.boardWinners,
+          globalBoard: state.globalBoard,
+          activeBoard: state.activeBoard,
+        };
+        move = AI.getUltimateBestMove(ultimateState, state.aiPlayer, 'medium');
+      }
+    } else {
+      move = getBestUltimateMove();
+    }
+    
+    if (move) {
+      // Handle both formats: {b, c} and {boardIndex, cellIndex}
+      const boardIdx = move.b !== undefined ? move.b : move.boardIndex;
+      const cellIdx = move.c !== undefined ? move.c : move.cellIndex;
+      placeMove(boardIdx, cellIdx, state.aiPlayer);
+    }
   }, delay);
 }
 
 /**
- * Pick the best move for the AI in Ultimate mode.
- *
- * Strategy (scales with difficulty):
- *  1. Determine which boards are currently playable.
- *  2. For each playable board, use AI.getBestMove on that local 3×3
- *     board to find the locally-optimal cell.
- *  3. Among those locally-optimal moves, prefer:
- *       a) A move that wins a local board outright
- *       b) A move where the resulting routed board is already won/full
- *          (gives opponent free choice — tactically sometimes useful)
- *       c) Otherwise the AI's locally best pick
- *  4. Random-chance bypass controlled by difficulty (same as classic AI).
- *
- * @returns {{ b: number, c: number } | null}
+ * Pick the best move for the AI in Ultimate mode using enhanced strategy engine.
+ * @returns {{ boardIndex: number, cellIndex: number } | null}
  */
 function getBestUltimateMove() {
-  // Collect all playable {b, c} pairs
-  const playable = [];
-  for (let b = 0; b < 9; b++) {
-    for (let c = 0; c < 9; c++) {
-      if (isCellPlayable(b, c)) playable.push({ b, c });
-    }
+  // Build Ultimate state object for strategy engine
+  const ultimateState = {
+    boards: state.boards,
+    boardWinners: state.boardWinners,
+    globalBoard: state.globalBoard,
+    activeBoard: state.activeBoard,
+  };
+
+  // Use enhanced AI with proper difficulty
+  const move = AI.getUltimateBestMove(ultimateState, state.aiPlayer, state.difficulty);
+  
+  // Ensure consistent format {boardIndex, cellIndex}
+  if (move && move.b !== undefined) {
+    return { boardIndex: move.b, cellIndex: move.c };
   }
-  if (playable.length === 0) return null;
-
-  // Difficulty random-bypass (same percentages as classic AI)
-  const randomChance = { beginner:.80, easy:.50, medium:.30, hard:.10, impossible:0 };
-  const chance = randomChance[state.difficulty] ?? 0;
-  if (Math.random() < chance) {
-    return playable[Math.floor(Math.random() * playable.length)];
-  }
-
-  // Group playable moves by board
-  const byBoard = {};
-  playable.forEach(({ b, c }) => {
-    if (!byBoard[b]) byBoard[b] = [];
-    byBoard[b].push(c);
-  });
-
-  const maxDepth = { beginner:1, easy:2, medium:4, hard:9, impossible:9 }[state.difficulty] ?? 4;
-
-  // For each active board, ask AI for the best local cell
-  let bestMove = null;
-  let bestScore = -Infinity;
-
-  for (const [boardIdx, cells] of Object.entries(byBoard)) {
-    const b = Number(boardIdx);
-    const localBoard = [...state.boards[b]]; // copy so AI doesn't mutate state
-
-    // Get AI's best local move on this mini-board
-    const aiCell = AI.getBestMove(localBoard, state.difficulty, state.aiPlayer);
-    // Fallback to first playable cell if AI returns null or an unplayable index
-    const chosenCell = (aiCell !== null && cells.includes(aiCell)) ? aiCell : cells[0];
-
-    // Score this (board, cell) choice:
-    // Base: minimax score from AI perspective on local board
-    // Bonus: if this move wins the local board, that's strategically strong
-    const testBoard = [...localBoard];
-    testBoard[chosenCell] = state.aiPlayer;
-    const localResult = checkBoard(testBoard);
-
-    let moveScore = 0;
-
-    if (localResult === state.aiPlayer) {
-      // Wins local board — strong move
-      moveScore = 100;
-      // Even better if it advances the global win
-      const testGlobal = [...state.globalBoard];
-      testGlobal[b] = state.aiPlayer;
-      const globalResult = checkBoard(testGlobal);
-      if (globalResult === state.aiPlayer) moveScore = 1000; // wins the game!
-    } else if (localResult === null) {
-      // Board not won yet — evaluate the routed destination
-      // Prefer routing opponent to a board that's already won/full (free choice)
-      const destBoard = chosenCell;
-      if (state.boardWinners[destBoard] !== null) {
-        moveScore = 15; // opponent gets free choice — acceptable
-      }
-    }
-
-    if (moveScore > bestScore) {
-      bestScore = moveScore;
-      bestMove = { b, c: chosenCell };
-    }
-  }
-
-  return bestMove || playable[Math.floor(Math.random() * playable.length)];
+  
+  return move;
 }
 
 // ── Action button state ───────────────────────────────
@@ -595,6 +629,7 @@ function _clearHint() {
 // ── Turn switch ───────────────────────────────────────
 function switchTurn() {
   state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+  state.lastMoveTime = Date.now();
   updateTurnIndicator();
   updateActionButtons();
   if (state.timerEnabled) startTurnTimer();
@@ -687,6 +722,22 @@ export function wireUltimateEvents() {
       navigateClean('gameSelectScreen');
     }
   });
+}
+
+/**
+ * Estimate AI strength rating based on difficulty level
+ */
+function estimateAIStrength(difficulty) {
+  const strengthMap = {
+    'beginner': 600,
+    'easy': 900,
+    'medium': 1200,
+    'hard': 1500,
+    'expert': 1800,
+    'impossible': 2200,
+    'adaptive': 1200, // Default for adaptive (will be adjusted)
+  };
+  return strengthMap[difficulty] || 1200;
 }
 
 export const Ultimate = { init };
