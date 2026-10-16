@@ -373,13 +373,11 @@ export function startClassic() {
   };
 
   dom.practiceBtn.onclick = () => {
-    dom.instruction.textContent = '🎯 Practice mode — play freely! No stats recorded.';
-    dom.nextBtn.disabled = false;
-    dom.prevBtn.disabled = true;
-    buildPracticeBoard(dom);
+    // Navigate to Classic game setup screen in practice mode
+    navigate('classicSetupScreen');
   };
 
-  dom.exitBtn.onclick = () => navigate('tutorialScreen');
+  dom.exitBtn.onclick = () => navigate('homeScreen');
 }
 
 export function startUltimate() {
@@ -404,13 +402,11 @@ export function startUltimate() {
   };
 
   dom.practiceBtn.onclick = () => {
-    dom.instruction.textContent = '🎯 Practice mode — play Classic freely! Ultimate practice coming soon.';
-    dom.nextBtn.disabled = false;
-    dom.prevBtn.disabled = true;
-    buildPracticeBoard(dom);
+    // Navigate to Ultimate game setup screen in practice mode
+    navigate('ultimateSetupScreen');
   };
 
-  dom.exitBtn.onclick = () => navigate('tutorialScreen');
+  dom.exitBtn.onclick = () => navigate('homeScreen');
 }
 
 export function wireTutorialScreenEvents() {

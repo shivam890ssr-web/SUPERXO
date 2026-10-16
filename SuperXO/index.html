@@ -380,8 +380,12 @@
       <h3>📈 Rating Progression</h3>
       <canvas id="ratingChart" class="rating-chart" aria-label="Rating progression chart"></canvas>
       <div class="chart-legend">
-        <span class="chart-legend-item"><span class="legend-dot" style="background:#4a9eff"></span>Rating</span>
-        <span class="chart-legend-item"><span class="legend-dot" style="background:#ffa500"></span>Skill Band</span>
+        <span class="chart-legend-item chart-legend-toggle active" data-series="rating">
+          <span class="legend-dot" style="background:#4a9eff"></span>Rating
+        </span>
+        <span class="chart-legend-item chart-legend-toggle active" data-series="skillBand">
+          <span class="legend-dot" style="background:#ffa500"></span>Skill Band
+        </span>
       </div>
     </div>
     

@@ -12,6 +12,7 @@ import { Storage } from './storage.js';
 import { showDialog, showToast, navigate, navigateClean, updateTurnGlow } from './main.js';
 import { getDifficultyController } from './difficultyController.js';
 import { getPlayerModel } from './playerModel.js';
+import { startGameAnalysis, getMatchHistory } from './moveAnalysis.js';
 
 const WIN_PATTERNS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -124,15 +125,17 @@ function init(config) {
   dom.replayBtn.disabled = true;
   updateActionButtons();
 
-  // Initialize game analysis for AI games (TEMPORARILY DISABLED)
-  if (state.vsAI) {
+  // Initialize game analysis for Adaptive AI games only
+  if (state.vsAI && state.difficulty === 'adaptive') {
     try {
-      // state.gameAnalysis = startGameAnalysis('ultimate', state.players, true, state.difficulty);
-      state.gameAnalysis = null;
+      state.gameAnalysis = startGameAnalysis('ultimate', state.players, true, state.difficulty);
+      console.log('[Ultimate] Game analysis initialized for Adaptive AI');
     } catch (e) {
-      console.warn('Game analysis disabled:', e);
+      console.warn('[Ultimate] Game analysis initialization failed:', e);
       state.gameAnalysis = null;
     }
+  } else {
+    state.gameAnalysis = null;
   }
   
   state.lastMoveTime = Date.now();
@@ -264,17 +267,26 @@ function placeMove(boardIdx, cellIdx, player) {
       handleGlobalWin(globalWinner);
       return;
     }
+    // Check if all boards are now resolved (win or draw)
+    if (state.boardWinners.every(w => w !== null)) {
+      // All boards resolved but no global winner = global draw
+      renderAll();
+      handleGlobalDraw();
+      return;
+    }
   } else if (localResult === 'draw') {
     state.boardWinners[boardIdx] = 'draw';
     state.globalBoard[boardIdx] = 'draw';
-    // Check for global draw (all boards resolved)
+    // Check if all boards are now resolved
     if (state.boardWinners.every(w => w !== null)) {
+      // First check if there's a global winner (ignoring drawn boards)
       const gw = checkBoard(state.globalBoard.map(v => v === 'draw' ? null : v));
       if (gw === 'X' || gw === 'O') {
         renderAll();
         handleGlobalWin(gw);
         return;
       }
+      // All boards resolved but no global winner = global draw
       renderAll();
       handleGlobalDraw();
       return;
@@ -336,29 +348,59 @@ function endGame(result) {
     result !== state.aiPlayer &&
     state.difficulty === 'impossible';
 
-  // Update player model for adaptive AI
+  // Finalize game analysis and update player model (ONLY for Adaptive AI)
   let ratingChange = null;
-  if (state.vsAI) {
+  let gameSummary = null;
+  
+  if (state.vsAI && state.difficulty === 'adaptive') {
     try {
       const playerModel = getPlayerModel();
       const controller = getDifficultyController();
       
-      // Determine result from human player's perspective
-      const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
-      let gameResult;
-      if (result === humanPlayer) gameResult = 'win';
-      else if (result === 'draw') gameResult = 'draw';
-      else gameResult = 'loss';
+      // Finalize move analysis if enabled
+      if (state.gameAnalysis && state.gameAnalysis.moves && state.gameAnalysis.moves.length > 0) {
+        try {
+          gameSummary = state.gameAnalysis.finalizeGame(result);
+          ratingChange = gameSummary.ratingUpdate;
+          
+          // Save to match history
+          const matchHistory = getMatchHistory();
+          matchHistory.saveGame(state.gameAnalysis.getGameData());
+          
+          console.log('[Ultimate] Game finalized with analysis:', gameSummary);
+        } catch (e) {
+          console.warn('[Ultimate] Error finalizing game analysis:', e);
+        }
+      }
       
-      // Estimate opponent strength based on difficulty
-      const opponentStrength = estimateAIStrength(state.difficulty);
+      // If no game analysis, update rating manually
+      if (!ratingChange) {
+        // Determine result from human player's perspective
+        const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
+        let gameResult;
+        if (result === humanPlayer) gameResult = 'win';
+        else if (result === 'draw') gameResult = 'draw';
+        else gameResult = 'loss';
+        
+        // Estimate opponent strength based on difficulty
+        const opponentStrength = estimateAIStrength(state.difficulty);
+        
+        // Update rating
+        ratingChange = playerModel.updateRating('ultimate', gameResult, opponentStrength, 0.5);
+        playerModel.incrementGameCount('ultimate');
+        playerModel.save(); // Save after manual update
+      }
       
-      // Update rating
-      ratingChange = playerModel.updateRating('ultimate', gameResult, opponentStrength, 0.5);
-      playerModel.incrementGameCount('ultimate');
+      // Always analyze patterns after game
+      const ultimateGames = playerModel.profile.ultimateGames;
+      if (ultimateGames % 5 === 0 && ultimateGames > 0) {
+        playerModel.analyzePatterns('ultimate');
+        playerModel.analyzePatterns('overall');
+      }
+      
       controller.recordGameComplete();
       
-      console.log('[Ultimate] Updated player rating:', ratingChange);
+      console.log('[Ultimate] Rating updated:', ratingChange);
     } catch (error) {
       console.warn('[Ultimate] Error updating player model:', error);
     }

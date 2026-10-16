@@ -543,6 +543,17 @@ function wireSettingsEvents() {
     });
   });
 
+  // Chart legend toggles
+  document.querySelectorAll('.chart-legend-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      toggle.classList.toggle('active');
+      // Get current mode
+      const activeMode = document.querySelector('.analytics-mode-btn.active')?.dataset.analyticsMode || 'overall';
+      renderAdaptiveAnalytics(activeMode);
+      Sound.play('click');
+    });
+  });
+
   // ── BGM: file picker ──
   const bgmInput = document.getElementById('bgmFileInput');
   bgmInput?.addEventListener('change', async () => {
@@ -925,16 +936,28 @@ async function renderAdaptiveAnalytics(mode = 'overall') {
     document.getElementById('analyticsSkillBand').style.color = skillBand.color;
     document.getElementById('analyticsGamesPlayed').textContent = gamesPlayed;
     
-    // Calculate W/L/D from recent games
-    const recentGames = profile.recentGames.filter(g => 
-      mode === 'overall' || g.mode === mode
-    );
-    const wins = recentGames.filter(g => g.result === 'win').length;
-    const losses = recentGames.filter(g => g.result === 'loss').length;
-    const draws = recentGames.filter(g => g.result === 'draw').length;
+    // Get mode-specific rating history for chart and stats
+    let ratingHistory = [];
+    if (mode === 'classic') {
+      ratingHistory = profile.classicRatingHistory || [];
+    } else if (mode === 'ultimate') {
+      ratingHistory = profile.ultimateRatingHistory || [];
+    } else {
+      // Overall: combine both histories, sorted by timestamp
+      const combined = [
+        ...(profile.classicRatingHistory || []).map(h => ({ ...h, mode: 'classic' })),
+        ...(profile.ultimateRatingHistory || []).map(h => ({ ...h, mode: 'ultimate' }))
+      ];
+      ratingHistory = combined.sort((a, b) => b.timestamp - a.timestamp);
+    }
+    
+    // Calculate W/L/D from rating history
+    const wins = ratingHistory.filter(g => g.result === 'win').length;
+    const losses = ratingHistory.filter(g => g.result === 'loss').length;
+    const draws = ratingHistory.filter(g => g.result === 'draw').length;
     document.getElementById('analyticsGamesBreakdown').textContent = `${wins} W / ${losses} L / ${draws} D`;
     
-    // Win rate
+    // Win rate (use total games played for the mode)
     const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
     document.getElementById('analyticsWinRate').textContent = gamesPlayed > 0 ? `${winRate}%` : '—';
     
@@ -944,11 +967,11 @@ async function renderAdaptiveAnalytics(mode = 'overall') {
       stable: '➡️ Stable',
       declining: '📉 Declining'
     };
-    document.getElementById('analyticsRecentForm').textContent = formEmoji[profile.recentForm] || 'Stable';
+    document.getElementById('analyticsRecentForm').textContent = formEmoji[profile.recentForm] || '➡️ Stable';
     
-    // Rating change (last 10 games)
-    if (recentGames.length >= 2) {
-      const totalChange = recentGames.slice(0, 10).reduce((sum, g) => sum + g.ratingChange, 0);
+    // Rating change (last 10 games from rating history)
+    if (ratingHistory.length >= 2) {
+      const totalChange = ratingHistory.slice(0, 10).reduce((sum, g) => sum + (g.change || 0), 0);
       const sign = totalChange >= 0 ? '+' : '';
       document.getElementById('analyticsRatingChange').textContent = `${sign}${totalChange}`;
       document.getElementById('analyticsRatingChange').style.color = totalChange >= 0 ? '#44dd44' : '#ff5555';
@@ -956,20 +979,26 @@ async function renderAdaptiveAnalytics(mode = 'overall') {
       document.getElementById('analyticsRatingChange').textContent = '—';
     }
     
-    // Render Rating Chart
-    renderRatingChart(recentGames, skillBand);
+    // Render Rating Chart with rating history
+    renderRatingChart(ratingHistory, skillBand, mode);
+    
+    // Get mode-specific analytics data
+    const modeData = mode === 'overall' ? profile.overall : profile[mode];
     
     // Move Quality Analysis
-    renderMoveQuality(profile.moveQuality);
+    renderMoveQuality(modeData ? modeData.moveQuality : null);
     
     // Tactical Performance
-    renderTacticalStats(profile.tactical);
+    renderTacticalStats(modeData ? modeData.tactical : null);
     
     // Strengths & Weaknesses
-    renderStrengthsWeaknesses(profile.strengths, profile.weaknesses);
+    renderStrengthsWeaknesses(
+      modeData ? modeData.strengths : [],
+      modeData ? modeData.weaknesses : []
+    );
     
-    // Recent Matches
-    renderAnalyticsMatches(recentGames);
+    // Recent Matches - use rating history
+    renderAnalyticsMatches(ratingHistory);
     
     // AI Adaptation Info
     renderAIAdaptation(profile, controller, mode);
@@ -983,7 +1012,7 @@ async function renderAdaptiveAnalytics(mode = 'overall') {
   }
 }
 
-function renderRatingChart(recentGames, skillBand) {
+function renderRatingChart(recentGames, skillBand, mode = 'overall') {
   const canvas = document.getElementById('ratingChart');
   if (!canvas) return;
   
@@ -992,7 +1021,16 @@ function renderRatingChart(recentGames, skillBand) {
   const H = canvas.height = 250;
   ctx.clearRect(0, 0, W, H);
   
-  if (recentGames.length < 2) {
+  // Check legend toggles
+  const ratingToggle = document.querySelector('.chart-legend-toggle[data-series="rating"]');
+  const skillBandToggle = document.querySelector('.chart-legend-toggle[data-series="skillBand"]');
+  const showRating = ratingToggle ? ratingToggle.classList.contains('active') : true;
+  const showSkillBand = skillBandToggle ? skillBandToggle.classList.contains('active') : true;
+  
+  // Use recentGames data (already filtered by mode from renderAdaptiveAnalytics)
+  const games = [...(recentGames || [])].slice(0, 10).reverse();
+  
+  if (games.length < 2) {
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.font = '14px Poppins, sans-serif';
     ctx.textAlign = 'center';
@@ -1000,9 +1038,7 @@ function renderRatingChart(recentGames, skillBand) {
     return;
   }
   
-  // Prepare data (reverse to show oldest first)
-  const games = [...recentGames].reverse();
-  const ratings = games.map(g => g.ratingAfter);
+  const ratings = games.map(g => g.rating || g.ratingAfter || 1000);
   
   // Find min/max for scaling with padding
   const minRating = Math.min(...ratings) - 50;
@@ -1039,46 +1075,70 @@ function renderRatingChart(recentGames, skillBand) {
     ctx.fillText(Math.round(ratingAtY), marginLeft - 8, y + 4);
   }
   
-  // Draw skill band background
-  const bandColor = skillBand.color + '15';
-  ctx.fillStyle = bandColor;
-  ctx.fillRect(marginLeft, marginTop, plotWidth, plotHeight);
+  // Draw skill band background (if enabled)
+  if (showSkillBand && skillBand) {
+    const bandColor = skillBand.color + '15';
+    ctx.fillStyle = bandColor;
+    ctx.fillRect(marginLeft, marginTop, plotWidth, plotHeight);
+    
+    // Draw skill band threshold line
+    if (skillBand.min > minRating && skillBand.min < maxRating) {
+      const y = scaleY(skillBand.min);
+      ctx.strokeStyle = skillBand.color + '40';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(W - marginRight, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Label
+      ctx.fillStyle = skillBand.color + '80';
+      ctx.font = '10px Poppins, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(skillBand.label, marginLeft + 5, y - 5);
+    }
+  }
   
-  // Draw rating line
-  ctx.strokeStyle = '#4a9eff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ratings.forEach((rating, i) => {
-    const x = scaleX(i);
-    const y = scaleY(rating);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  
-  // Draw points
-  ratings.forEach((rating, i) => {
-    const x = scaleX(i);
-    const y = scaleY(rating);
-    ctx.fillStyle = '#2dd4ff';
+  // Draw rating line (if enabled)
+  if (showRating) {
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
+    ratings.forEach((rating, i) => {
+      const x = scaleX(i);
+      const y = scaleY(rating);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    
+    // Draw points
+    ratings.forEach((rating, i) => {
+      const x = scaleX(i);
+      const y = scaleY(rating);
+      ctx.fillStyle = '#2dd4ff';
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
   
   // X-axis label
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '11px Poppins, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`Last ${ratings.length} games`, W / 2, H - 10);
+  const modeLabel = mode === 'classic' ? 'Classic' : mode === 'ultimate' ? 'Ultimate' : 'Overall';
+  ctx.fillText(`${modeLabel} · Last ${ratings.length} games`, W / 2, H - 10);
 }
 
 function renderMoveQuality(moveQuality) {
   const container = document.getElementById('moveQualityBars');
   if (!container) return;
   
-  if (moveQuality.totalMoves === 0) {
-    container.innerHTML = '<div class="empty-state-sm">Play AI games to track move quality</div>';
+  if (!moveQuality || moveQuality.totalMoves === 0) {
+    container.innerHTML = '<div class="empty-state-sm">Play Adaptive AI games to track move quality</div>';
     return;
   }
   
@@ -1114,8 +1174,8 @@ function renderTacticalStats(tactical) {
   const container = document.getElementById('tacticalStats');
   if (!container) return;
   
-  if (tactical.totalTacticalOpportunities === 0) {
-    container.innerHTML = '<div class="empty-state-sm">Tactical stats collected during gameplay</div>';
+  if (!tactical || tactical.totalTacticalOpportunities === 0) {
+    container.innerHTML = '<div class="empty-state-sm">Tactical stats collected during Adaptive AI games</div>';
     return;
   }
   
@@ -1174,17 +1234,17 @@ function renderStrengthsWeaknesses(strengths, weaknesses) {
   });
 }
 
-function renderAnalyticsMatches(recentGames) {
+function renderAnalyticsMatches(ratingHistory) {
   const container = document.getElementById('analyticsMatches');
   if (!container) return;
   
-  if (recentGames.length === 0) {
+  if (!ratingHistory || ratingHistory.length === 0) {
     container.innerHTML = '<div class="empty-state-sm">No recent matches</div>';
     return;
   }
   
   container.innerHTML = '';
-  recentGames.slice(0, 10).forEach(game => {
+  ratingHistory.slice(0, 10).forEach(game => {
     const item = document.createElement('div');
     item.className = 'analytics-match-item';
     
@@ -1192,10 +1252,11 @@ function renderAnalyticsMatches(recentGames) {
     const resultIcon = game.result === 'win' ? '✅' : game.result === 'loss' ? '❌' : '🤝';
     const modeIcon = game.mode === 'ultimate' ? '👑' : '🎮';
     
-    const ratingChangeClass = game.ratingChange >= 0 ? 'positive' : 'negative';
-    const ratingChangeSign = game.ratingChange >= 0 ? '+' : '';
+    const change = game.change || 0;
+    const ratingChangeClass = change >= 0 ? 'positive' : 'negative';
+    const ratingChangeSign = change >= 0 ? '+' : '';
     
-    const date = new Date(game.timestamp + (Date.now() - recentGames[0].timestamp));
+    const date = new Date(game.timestamp);
     const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     
     item.innerHTML = `
@@ -1203,10 +1264,10 @@ function renderAnalyticsMatches(recentGames) {
         ${resultIcon} ${game.result.charAt(0).toUpperCase() + game.result.slice(1)}
       </div>
       <div class="analytics-match-details">
-        ${modeIcon} ${game.mode} · ${dateStr}
+        ${modeIcon} ${game.mode || 'Classic'} · ${dateStr}
       </div>
       <div class="analytics-match-rating ${ratingChangeClass}">
-        ${ratingChangeSign}${game.ratingChange}
+        ${ratingChangeSign}${change}
       </div>
     `;
     container.appendChild(item);

@@ -105,16 +105,17 @@ function init(config) {
 
   dom.replayBtn.disabled = true;
 
-  // Initialize game analysis for AI games (TEMPORARILY DISABLED)
-  if (state.vsAI) {
+  // Initialize game analysis for Adaptive AI games only
+  if (state.vsAI && state.difficulty === 'adaptive') {
     try {
-      const humanPlayer = state.aiPlayer === 'O' ? 'X' : 'O';
-      state.gameAnalysis = startGameAnalysis('classic', state.players, true, state.difficulty, humanPlayer, state.aiPlayer);
-      console.log('[Classic] Game analysis initialized');
+      state.gameAnalysis = startGameAnalysis('classic', state.players, true, state.difficulty);
+      console.log('[Classic] Game analysis initialized for Adaptive AI');
     } catch (e) {
       console.warn('[Classic] Game analysis initialization failed:', e);
       state.gameAnalysis = null;
     }
+  } else {
+    state.gameAnalysis = null;
   }
   
   state.lastMoveTime = Date.now();
@@ -184,12 +185,11 @@ function handleCellClick(idx) {
 
 function placeMove(idx, player) {
   // Record move analysis for human players in AI games
-  // DISABLED: Waiting for AI.analyzeMoveQuality implementation
-  // if (state.vsAI && state.gameAnalysis && player !== state.aiPlayer) {
-  //   const timeSpent = Date.now() - state.lastMoveTime;
-  //   const boardBeforeMove = [...state.board];
-  //   state.gameAnalysis.recordMove(boardBeforeMove, idx, player, timeSpent);
-  // }
+  if (state.vsAI && state.gameAnalysis && player !== state.aiPlayer) {
+    const timeSpent = Date.now() - state.lastMoveTime;
+    const boardBeforeMove = [...state.board];
+    state.gameAnalysis.recordMove(boardBeforeMove, idx, player, timeSpent);
+  }
   
   state.lastMoveTime = Date.now();
   state.board[idx] = player;
@@ -332,16 +332,16 @@ function endMatch() {
   const perfectGame = matchWinner !== 'draw' &&
     ((matchWinner === 'X' && oWins === 0) || (matchWinner === 'O' && xWins === 0));
 
-  // Finalize game analysis and update player model
+  // Finalize game analysis and update player model (ONLY for Adaptive AI)
   let ratingChange = null;
   let gameSummary = null;
   
-  if (state.vsAI) {
+  if (state.vsAI && state.difficulty === 'adaptive') {
     try {
       const playerModel = getPlayerModel();
       const controller = getDifficultyController();
       
-      // Finalize move analysis if enabled (currently disabled)
+      // Finalize move analysis if enabled
       if (state.gameAnalysis && state.gameAnalysis.moves && state.gameAnalysis.moves.length > 0) {
         try {
           gameSummary = state.gameAnalysis.finalizeGame(matchWinner);
@@ -369,9 +369,18 @@ function endMatch() {
         const opponentStrength = estimateAIStrength(state.difficulty);
         ratingChange = playerModel.updateRating('classic', result, opponentStrength, 0.5);
         playerModel.incrementGameCount('classic');
+        playerModel.save(); // Save after manual update
+      }
+      
+      // Always analyze patterns after game
+      const classicGames = playerModel.profile.classicGames;
+      if (classicGames % 5 === 0 && classicGames > 0) {
+        playerModel.analyzePatterns('classic');
+        playerModel.analyzePatterns('overall');
       }
       
       controller.recordGameComplete();
+      console.log('[Classic] Rating updated:', ratingChange);
     } catch (error) {
       console.warn('[Classic] Error updating player model:', error);
     }

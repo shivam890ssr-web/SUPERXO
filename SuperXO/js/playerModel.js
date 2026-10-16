@@ -21,6 +21,30 @@ export const SKILL_BANDS = {
  * Default player profile structure
  */
 function createDefaultProfile() {
+  const createModeData = () => ({
+    moveQuality: {
+      excellent: 0,
+      good: 0,
+      acceptable: 0,
+      inaccurate: 0,
+      mistake: 0,
+      blunder: 0,
+      totalMoves: 0,
+    },
+    tactical: {
+      threatsCreated: 0,
+      threatsBlocked: 0,
+      threatsMissed: 0,
+      forksCreated: 0,
+      forksBlocked: 0,
+      forksMissed: 0,
+      winningMovesMissed: 0,
+      totalTacticalOpportunities: 0,
+    },
+    strengths: [],
+    weaknesses: [],
+  });
+
   return {
     version: 1,
     
@@ -32,6 +56,10 @@ function createDefaultProfile() {
     // Confidence in rating (increases with games played)
     ratingConfidence: 0.5, // 0-1, starts at 0.5
     
+    // Separate rating histories for each mode (last 50 games each)
+    classicRatingHistory: [],
+    ultimateRatingHistory: [],
+    
     // Recent form tracking
     recentGames: [], // last 10 games performance
     recentForm: 'stable', // 'improving' | 'stable' | 'declining'
@@ -41,28 +69,10 @@ function createDefaultProfile() {
     classicGames: 0,
     ultimateGames: 0,
     
-    // Move quality tracking
-    moveQuality: {
-      excellent: 0,
-      good: 0,
-      acceptable: 0,
-      inaccurate: 0,
-      mistakes: 0,
-      blunders: 0,
-      totalMoves: 0,
-    },
-    
-    // Tactical performance
-    tactical: {
-      threatsCreated: 0,
-      threatsBlocked: 0,
-      threatsMissed: 0,
-      forksCreated: 0,
-      forksBlocked: 0,
-      forksMissed: 0,
-      winningMovesMissed: 0,
-      totalTacticalOpportunities: 0,
-    },
+    // Mode-specific data
+    classic: createModeData(),
+    ultimate: createModeData(),
+    overall: createModeData(), // Combined data from both modes
     
     // Performance metrics
     metrics: {
@@ -72,12 +82,6 @@ function createDefaultProfile() {
       midgameStrength: 0,
       endgameStrength: 0,
     },
-    
-    // Detected strengths (pattern recognition)
-    strengths: [],
-    
-    // Detected weaknesses (pattern recognition)
-    weaknesses: [],
     
     // Adaptive AI state
     adaptive: {
@@ -110,8 +114,64 @@ export class PlayerModel {
     if (!profile || !profile.version) {
       profile = createDefaultProfile();
       this.save(profile);
+    } else {
+      // Migrate old profile structure to new mode-specific structure
+      if (!profile.classic || !profile.ultimate || !profile.overall) {
+        profile = this.migrateProfile(profile);
+        this.save(profile);
+      }
     }
     return profile;
+  }
+
+  /**
+   * Migrate old profile to new mode-specific structure
+   */
+  migrateProfile(oldProfile) {
+    const createModeData = () => ({
+      moveQuality: {
+        excellent: 0,
+        good: 0,
+        acceptable: 0,
+        inaccurate: 0,
+        mistake: 0,
+        blunder: 0,
+        totalMoves: 0,
+      },
+      tactical: {
+        threatsCreated: 0,
+        threatsBlocked: 0,
+        threatsMissed: 0,
+        forksCreated: 0,
+        forksBlocked: 0,
+        forksMissed: 0,
+        winningMovesMissed: 0,
+        totalTacticalOpportunities: 0,
+      },
+      strengths: [],
+      weaknesses: [],
+    });
+
+    // If old data exists, move it to overall
+    const newProfile = {
+      ...oldProfile,
+      classic: createModeData(),
+      ultimate: createModeData(),
+      overall: {
+        moveQuality: oldProfile.moveQuality || createModeData().moveQuality,
+        tactical: oldProfile.tactical || createModeData().tactical,
+        strengths: oldProfile.strengths || [],
+        weaknesses: oldProfile.weaknesses || [],
+      },
+    };
+
+    // Remove old top-level fields
+    delete newProfile.moveQuality;
+    delete newProfile.tactical;
+    delete newProfile.strengths;
+    delete newProfile.weaknesses;
+
+    return newProfile;
   }
 
   /**
@@ -168,8 +228,32 @@ export class PlayerModel {
     
     if (mode === 'classic') {
       this.profile.classicRating = newRating;
+      // Add to classic rating history
+      this.profile.classicRatingHistory.unshift({
+        rating: newRating,
+        change: ratingChange,
+        result,
+        opponentStrength,
+        timestamp: Date.now(),
+      });
+      // Keep last 50
+      if (this.profile.classicRatingHistory.length > 50) {
+        this.profile.classicRatingHistory.length = 50;
+      }
     } else {
       this.profile.ultimateRating = newRating;
+      // Add to ultimate rating history
+      this.profile.ultimateRatingHistory.unshift({
+        rating: newRating,
+        change: ratingChange,
+        result,
+        opponentStrength,
+        timestamp: Date.now(),
+      });
+      // Keep last 50
+      if (this.profile.ultimateRatingHistory.length > 50) {
+        this.profile.ultimateRatingHistory.length = 50;
+      }
     }
     
     // Update overall rating (weighted average)
@@ -236,24 +320,50 @@ export class PlayerModel {
   }
 
   /**
-   * Record move quality
+   * Record move quality for a specific mode
    * @param {string} quality - 'excellent' | 'good' | 'acceptable' | 'inaccurate' | 'mistake' | 'blunder'
+   * @param {string} mode - 'classic' | 'ultimate'
    */
-  recordMoveQuality(quality) {
-    if (this.profile.moveQuality[quality] !== undefined) {
-      this.profile.moveQuality[quality]++;
-      this.profile.moveQuality.totalMoves++;
+  recordMoveQuality(quality, mode = 'classic') {
+    // Handle invalid quality (NaN, undefined, etc.)
+    if (!quality || quality === 'NaN' || typeof quality !== 'string') {
+      console.warn(`[PlayerModel] Invalid quality value: ${quality}, defaulting to 'acceptable'`);
+      quality = 'acceptable';
+    }
+    
+    const modeData = this.profile[mode];
+    if (modeData && modeData.moveQuality[quality] !== undefined) {
+      modeData.moveQuality[quality]++;
+      modeData.moveQuality.totalMoves++;
+      
+      // Also update overall
+      this.profile.overall.moveQuality[quality]++;
+      this.profile.overall.moveQuality.totalMoves++;
+      
+      console.log(`[PlayerModel] Recorded ${quality} move for ${mode}. Total moves: ${modeData.moveQuality.totalMoves}`);
+    } else {
+      console.warn(`[PlayerModel] Failed to record move quality: mode=${mode}, quality=${quality}, modeData=${!!modeData}`);
     }
   }
 
   /**
-   * Record tactical event
+   * Record tactical event for a specific mode
    * @param {string} event - tactical event type
+   * @param {string} mode - 'classic' | 'ultimate'
    */
-  recordTactical(event) {
-    if (this.profile.tactical[event] !== undefined) {
-      this.profile.tactical[event]++;
-      this.profile.tactical.totalTacticalOpportunities++;
+  recordTactical(event, mode = 'classic') {
+    const modeData = this.profile[mode];
+    if (modeData && modeData.tactical[event] !== undefined) {
+      modeData.tactical[event]++;
+      modeData.tactical.totalTacticalOpportunities++;
+      
+      // Also update overall
+      this.profile.overall.tactical[event]++;
+      this.profile.overall.tactical.totalTacticalOpportunities++;
+      
+      console.log(`[PlayerModel] Recorded tactical event ${event} for ${mode}`);
+    } else {
+      console.warn(`[PlayerModel] Failed to record tactical: mode=${mode}, event=${event}, modeData=${!!modeData}`);
     }
   }
 
@@ -288,19 +398,33 @@ export class PlayerModel {
   }
 
   /**
-   * Analyze strengths and weaknesses from performance data
+   * Analyze strengths and weaknesses from performance data for a specific mode
+   * @param {string} mode - 'classic' | 'ultimate' | 'overall'
    */
-  analyzePatterns() {
+  analyzePatterns(mode = 'overall') {
+    console.log(`[PlayerModel] Analyzing patterns for ${mode} mode...`);
+    
+    const modeData = this.profile[mode];
+    if (!modeData) {
+      console.warn(`[PlayerModel] No data found for mode: ${mode}`);
+      return { strengths: [], weaknesses: [] };
+    }
+    
     const strengths = [];
     const weaknesses = [];
     
-    const mq = this.profile.moveQuality;
-    const tact = this.profile.tactical;
+    const mq = modeData.moveQuality;
+    const tact = modeData.tactical;
+    
+    console.log(`[PlayerModel] Move quality data:`, mq);
+    console.log(`[PlayerModel] Tactical data:`, tact);
     
     // Move quality analysis
     if (mq.totalMoves > 20) {
       const excellentRate = mq.excellent / mq.totalMoves;
-      const blunderRate = mq.blunders / mq.totalMoves;
+      const blunderRate = mq.blunder / mq.totalMoves;
+      
+      console.log(`[PlayerModel] Excellent rate: ${(excellentRate * 100).toFixed(1)}%, Blunder rate: ${(blunderRate * 100).toFixed(1)}%`);
       
       if (excellentRate > 0.30) {
         strengths.push({
@@ -317,12 +441,16 @@ export class PlayerModel {
           confidence: Math.min(1.0, mq.totalMoves / 100),
         });
       }
+    } else {
+      console.log(`[PlayerModel] Not enough moves for quality analysis (need 20+, have ${mq.totalMoves})`);
     }
     
     // Tactical analysis
     if (tact.totalTacticalOpportunities > 10) {
       const threatsBlockedRate = tact.threatsBlocked / (tact.threatsBlocked + tact.threatsMissed || 1);
       const forkCreationRate = tact.forksCreated / (tact.totalTacticalOpportunities || 1);
+      
+      console.log(`[PlayerModel] Threats blocked rate: ${(threatsBlockedRate * 100).toFixed(1)}%, Fork creation rate: ${(forkCreationRate * 100).toFixed(1)}%`);
       
       if (threatsBlockedRate > 0.80) {
         strengths.push({
@@ -355,6 +483,8 @@ export class PlayerModel {
           confidence: Math.min(1.0, tact.winningMovesMissed / 20),
         });
       }
+    } else {
+      console.log(`[PlayerModel] Not enough tactical opportunities for analysis (need 10+, have ${tact.totalTacticalOpportunities})`);
     }
     
     // Rating trend analysis
@@ -366,8 +496,11 @@ export class PlayerModel {
       });
     }
     
-    this.profile.strengths = strengths;
-    this.profile.weaknesses = weaknesses;
+    modeData.strengths = strengths;
+    modeData.weaknesses = weaknesses;
+    
+    console.log(`[PlayerModel] Found ${strengths.length} strengths and ${weaknesses.length} weaknesses`);
+    
     this.save();
     
     return { strengths, weaknesses };
@@ -385,8 +518,8 @@ export class PlayerModel {
       goodRate: (mq.good / mq.totalMoves * 100).toFixed(1),
       acceptableRate: (mq.acceptable / mq.totalMoves * 100).toFixed(1),
       inaccurateRate: (mq.inaccurate / mq.totalMoves * 100).toFixed(1),
-      mistakeRate: (mq.mistakes / mq.totalMoves * 100).toFixed(1),
-      blunderRate: (mq.blunders / mq.totalMoves * 100).toFixed(1),
+      mistakeRate: (mq.mistake / mq.totalMoves * 100).toFixed(1),
+      blunderRate: (mq.blunder / mq.totalMoves * 100).toFixed(1),
       totalMoves: mq.totalMoves,
     };
   }

@@ -34,6 +34,8 @@ export class GameAnalysis {
         analysis = AI.analyzeUltimateMoveQuality(boardState, move, player);
       }
       
+      console.log(`[MoveAnalysis] Move ${this.moves.length + 1}: ${player} plays ${move}, quality: ${analysis.quality}`);
+      
       const moveRecord = {
         moveNumber: this.moves.length + 1,
         player,
@@ -59,11 +61,14 @@ export class GameAnalysis {
       // Update player model if this is a human move against AI
       if (this.vsAI && player !== this.getAIPlayer()) {
         this.updatePlayerModelForMove(moveRecord);
+        console.log(`[MoveAnalysis] Updated player model: quality=${moveRecord.quality}, totalMoves now: ${this.moves.filter(m => m.player !== this.getAIPlayer()).length}`);
       }
       
       return moveRecord;
     } catch (error) {
-      console.warn('[MoveAnalysis] Error analyzing move:', error);
+      console.error('[MoveAnalysis] Error analyzing move:', error);
+      console.error('[MoveAnalysis] Board state:', boardState);
+      console.error('[MoveAnalysis] Move:', move, 'Player:', player);
       // Record basic move data without analysis
       const basicRecord = {
         moveNumber: this.moves.length + 1,
@@ -94,8 +99,8 @@ export class GameAnalysis {
   updatePlayerModelForMove(moveRecord) {
     const playerModel = getPlayerModel();
     
-    // Record move quality
-    playerModel.recordMoveQuality(moveRecord.quality);
+    // Record move quality with mode
+    playerModel.recordMoveQuality(moveRecord.quality, this.mode);
     
     // Record tactical events
     const tactics = moveRecord.tactics;
@@ -104,20 +109,20 @@ export class GameAnalysis {
       // Player found the winning move
     } else if (tactics.winningMove !== null && !moveRecord.wasBest) {
       // Player missed a winning move
-      playerModel.recordTactical('winningMovesMissed');
+      playerModel.recordTactical('winningMovesMissed', this.mode);
     }
     
     if (tactics.blockingMove !== null && moveRecord.wasBest) {
-      playerModel.recordTactical('threatsBlocked');
+      playerModel.recordTactical('threatsBlocked', this.mode);
     } else if (tactics.blockingMove !== null && !moveRecord.wasBest) {
-      playerModel.recordTactical('threatsMissed');
+      playerModel.recordTactical('threatsMissed', this.mode);
     }
     
     if (tactics.forkMoves && tactics.forkMoves.length > 0) {
       if (moveRecord.wasBest || (this.mode === 'classic' && tactics.forkMoves.includes(moveRecord.move))) {
-        playerModel.recordTactical('forksCreated');
+        playerModel.recordTactical('forksCreated', this.mode);
       } else {
-        playerModel.recordTactical('forksMissed');
+        playerModel.recordTactical('forksMissed', this.mode);
       }
     }
     
@@ -127,7 +132,7 @@ export class GameAnalysis {
         : tactics.forkBlockMoves.some(m => JSON.stringify(m) === JSON.stringify(moveRecord.move));
       
       if (moveMatches) {
-        playerModel.recordTactical('forksBlocked');
+        playerModel.recordTactical('forksBlocked', this.mode);
       }
     }
   }
@@ -150,8 +155,8 @@ export class GameAnalysis {
     
     const moveQualityScore = this.calculateAverageMoveQuality(humanMoves);
     
-    // Update player model rating if playing against AI
-    if (this.vsAI) {
+    // Update player model rating ONLY if playing Adaptive AI
+    if (this.vsAI && this.difficulty === 'adaptive') {
       const playerModel = getPlayerModel();
       
       // Determine result from human player's perspective
@@ -190,9 +195,11 @@ export class GameAnalysis {
       // Increment game count
       playerModel.incrementGameCount(this.mode);
       
-      // Analyze patterns periodically (every 5 games)
-      if (playerModel.profile.totalGames % 5 === 0) {
-        playerModel.analyzePatterns();
+      // Analyze patterns periodically (every 5 games for this mode)
+      const modeGames = this.mode === 'classic' ? playerModel.profile.classicGames : playerModel.profile.ultimateGames;
+      if (modeGames % 5 === 0) {
+        playerModel.analyzePatterns(this.mode);
+        playerModel.analyzePatterns('overall');
       }
       
       playerModel.save();

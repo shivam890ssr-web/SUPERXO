@@ -280,9 +280,323 @@ function getUltimateBestMove(state, player, difficulty = 'medium', adaptiveProfi
   return availableMoves[Math.floor(Math.random() * availableMoves.length)];
 }
 
+/**
+ * Analyze move quality for Classic Tic-Tac-Toe
+ * @param {Array} boardState - board before move
+ * @param {number} move - cell index of the move
+ * @param {string} player - 'X' or 'O'
+ * @returns {Object} analysis with quality, evalLoss, tactics, etc.
+ */
+function analyzeMoveQuality(boardState, move, player) {
+  const board = [...boardState];
+  const opponent = player === 'X' ? 'O' : 'X';
+  
+  // Get score of the played move
+  board[move] = player;
+  const moveScore = minimax(board, player, false, -Infinity, Infinity, 0, 9);
+  board[move] = null;
+  
+  // Find the best possible move
+  let bestScore = -Infinity;
+  let bestMove = null;
+  const available = [];
+  
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      available.push(i);
+      board[i] = player;
+      const score = minimax(board, player, false, -Infinity, Infinity, 0, 9);
+      board[i] = null;
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = i;
+      }
+    }
+  }
+  
+  // Calculate evaluation loss
+  const evalLoss = bestScore - moveScore;
+  const wasBest = move === bestMove;
+  
+  // Determine move quality based on eval loss
+  let quality;
+  if (wasBest || evalLoss === 0) {
+    quality = 'excellent';
+  } else if (evalLoss <= 1) {
+    quality = 'good';
+  } else if (evalLoss <= 3) {
+    quality = 'acceptable';
+  } else if (evalLoss <= 5) {
+    quality = 'inaccurate';
+  } else if (evalLoss <= 8) {
+    quality = 'mistake';
+  } else {
+    quality = 'blunder';
+  }
+  
+  // Tactical analysis
+  const tactics = analyzeTactics(board, move, player);
+  
+  // Adjust quality based on tactics
+  if (tactics.winningMove !== null && wasBest) {
+    quality = 'excellent';
+  } else if (tactics.winningMove !== null && !wasBest) {
+    quality = 'blunder'; // Missed winning move
+  }
+  
+  if (tactics.blockingMove !== null && wasBest) {
+    quality = Math.max(quality, 'good');
+  } else if (tactics.blockingMove !== null && !wasBest) {
+    quality = 'mistake'; // Missed blocking move
+  }
+  
+  return {
+    quality,
+    evalLoss,
+    moveScore,
+    bestScore,
+    bestMove,
+    wasBest,
+    tactics,
+  };
+}
+
+/**
+ * Analyze tactical patterns in Classic Tic-Tac-Toe
+ * @param {Array} board - current board state
+ * @param {number} move - cell index (optional, for move-specific analysis)
+ * @param {string} player - 'X' or 'O'
+ * @returns {Object} tactical information
+ */
+function analyzeTactics(board, move, player) {
+  const opponent = player === 'X' ? 'O' : 'X';
+  const tactics = {
+    winningMove: null,
+    blockingMove: null,
+    forkMoves: [],
+    forkBlockMoves: [],
+  };
+  
+  // Check for winning move
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = player;
+      if (hasWon(board, player)) {
+        tactics.winningMove = i;
+      }
+      board[i] = null;
+      if (tactics.winningMove !== null) break;
+    }
+  }
+  
+  // Check for blocking move (opponent's winning move)
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = opponent;
+      if (hasWon(board, opponent)) {
+        tactics.blockingMove = i;
+      }
+      board[i] = null;
+      if (tactics.blockingMove !== null) break;
+    }
+  }
+  
+  // Check for fork moves (creating multiple win threats)
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = player;
+      const winThreats = countWinThreats(board, player);
+      board[i] = null;
+      
+      if (winThreats >= 2) {
+        tactics.forkMoves.push(i);
+      }
+    }
+  }
+  
+  // Check for fork blocking moves
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = opponent;
+      const winThreats = countWinThreats(board, opponent);
+      board[i] = null;
+      
+      if (winThreats >= 2) {
+        tactics.forkBlockMoves.push(i);
+      }
+    }
+  }
+  
+  return tactics;
+}
+
+/**
+ * Count how many winning threats (two-in-a-row) a player has
+ * @param {Array} board
+ * @param {string} player
+ * @returns {number}
+ */
+function countWinThreats(board, player) {
+  let threats = 0;
+  
+  for (const pattern of WIN_PATTERNS) {
+    const [a, b, c] = pattern;
+    const cells = [board[a], board[b], board[c]];
+    const playerCount = cells.filter(cell => cell === player).length;
+    const emptyCount = cells.filter(cell => cell === null).length;
+    
+    // Two of this player's marks and one empty = threat
+    if (playerCount === 2 && emptyCount === 1) {
+      threats++;
+    }
+  }
+  
+  return threats;
+}
+
+/**
+ * Analyze move quality for Ultimate Tic-Tac-Toe
+ * @param {Object} state - { boards, boardWinners, globalBoard, activeBoard }
+ * @param {Object} move - { b: boardIndex, c: cellIndex }
+ * @param {string} player - 'X' or 'O'
+ * @returns {Object} analysis with quality, evalLoss, tactics, etc.
+ */
+function analyzeUltimateMoveQuality(state, move, player) {
+  const { boards, boardWinners, activeBoard } = state;
+  const opponent = player === 'X' ? 'O' : 'X';
+  
+  // Simplified evaluation for Ultimate (more complex than Classic)
+  // Focus on tactical patterns rather than full minimax
+  
+  const tactics = analyzeUltimateTactics(state, move, player);
+  
+  // Determine quality based on tactical significance
+  let quality = 'acceptable';
+  let evalLoss = 3; // Default medium loss
+  
+  // Excellent moves
+  if (tactics.winsLocalBoard) {
+    quality = 'excellent';
+    evalLoss = 0;
+  } else if (tactics.blocksLocalWin) {
+    quality = 'good';
+    evalLoss = 1;
+  } else if (tactics.createsLocalFork) {
+    quality = 'good';
+    evalLoss = 1;
+  } else if (tactics.controlsCenter) {
+    quality = 'good';
+    evalLoss = 2;
+  }
+  
+  // Poor moves
+  if (tactics.missedLocalWin) {
+    quality = 'blunder';
+    evalLoss = 10;
+  } else if (tactics.missedBlock) {
+    quality = 'mistake';
+    evalLoss = 6;
+  } else if (tactics.sendsToWonBoard) {
+    quality = 'mistake';
+    evalLoss = 5;
+  }
+  
+  return {
+    quality,
+    evalLoss,
+    moveScore: -evalLoss, // Approximate
+    bestScore: 0,
+    bestMove: null, // Too expensive to calculate for Ultimate
+    wasBest: quality === 'excellent',
+    tactics,
+  };
+}
+
+/**
+ * Analyze tactical patterns in Ultimate Tic-Tac-Toe
+ * @param {Object} state
+ * @param {Object} move - { b: boardIndex, c: cellIndex }
+ * @param {string} player
+ * @returns {Object} tactical information
+ */
+function analyzeUltimateTactics(state, move, player) {
+  const { boards, boardWinners } = state;
+  const opponent = player === 'X' ? 'O' : 'X';
+  const { b: boardIdx, c: cellIdx } = move;
+  
+  const tactics = {
+    winsLocalBoard: false,
+    blocksLocalWin: false,
+    createsLocalFork: false,
+    controlsCenter: false,
+    sendsToWonBoard: false,
+    missedLocalWin: false,
+    missedBlock: false,
+  };
+  
+  // Check if move wins local board
+  const testBoard = [...boards[boardIdx]];
+  testBoard[cellIdx] = player;
+  if (hasWon(testBoard, player)) {
+    tactics.winsLocalBoard = true;
+  }
+  
+  // Check if there was a winning move available
+  for (let i = 0; i < 9; i++) {
+    if (boards[boardIdx][i] === null && i !== cellIdx) {
+      const test = [...boards[boardIdx]];
+      test[i] = player;
+      if (hasWon(test, player)) {
+        tactics.missedLocalWin = true;
+        break;
+      }
+    }
+  }
+  
+  // Check if move blocks opponent's local win
+  testBoard[cellIdx] = opponent;
+  if (hasWon(testBoard, opponent)) {
+    tactics.blocksLocalWin = true;
+  }
+  
+  // Check if there was a blocking move available
+  for (let i = 0; i < 9; i++) {
+    if (boards[boardIdx][i] === null) {
+      const test = [...boards[boardIdx]];
+      test[i] = opponent;
+      if (hasWon(test, opponent) && i !== cellIdx) {
+        tactics.missedBlock = true;
+        break;
+      }
+    }
+  }
+  
+  // Check if move controls center
+  if (cellIdx === 4) {
+    tactics.controlsCenter = true;
+  }
+  
+  // Check if move creates fork in local board
+  testBoard[cellIdx] = player;
+  const threats = countWinThreats(testBoard, player);
+  if (threats >= 2) {
+    tactics.createsLocalFork = true;
+  }
+  
+  // Check if move sends opponent to already-won board
+  if (boardWinners[cellIdx] !== null) {
+    tactics.sendsToWonBoard = true;
+  }
+  
+  return tactics;
+}
+
 export const AI = {
   getBestMove,
   getUltimateBestMove,
+  analyzeMoveQuality,
+  analyzeUltimateMoveQuality,
   hasWon,
   isFull,
   WIN_PATTERNS,
